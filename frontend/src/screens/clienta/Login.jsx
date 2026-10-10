@@ -37,14 +37,14 @@ export default function Login() {
       <div className="w-full max-w-sm bg-white rounded-2xl shadow-sm p-6">
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div>
-            <label className="text-sm font-medium text-grafondo">Tu teléfono</label>
+            <label className="text-sm font-medium text-grafondo">Tu teléfono o tu número de clienta</label>
             <input
-              type="tel"
+              type="text"
               inputMode="tel"
               required
               autoFocus
               autoComplete="tel"
-              placeholder="809-555-0000"
+              placeholder="809-555-0000  ó  CL-000002"
               value={telefono}
               onChange={(e) => setTelefono(e.target.value)}
               className="mt-1 w-full border border-gray-200 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-petroleo"
