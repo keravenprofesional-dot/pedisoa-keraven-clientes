@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabaseClient'
 import ProductCard from '../../components/ProductCard'
 import { useCart } from '../../context/CartContext'
 import { normalizar } from '../../utils/codigoProducto'
+import { agruparCatalogo, etiquetaTamano } from '../../utils/ordenProducto'
 
 const SIN_SECCION = 'Otros productos'
 
@@ -40,17 +41,11 @@ export default function Catalog() {
     )
   }, [products, categoryId, query])
 
-  // Agrupado por sección, y dentro de cada una lo disponible va primero.
+  // Por sección y, dentro de cada una, por tamaño: los de 32 oz nunca se
+  // mezclan con los de 10 oz, y los sabores van siempre en el mismo orden.
   const secciones = useMemo(() => {
     const nombres = new Map(categories.map((c) => [c.id, c.nombre]))
-    const m = new Map()
-    for (const p of filtrados) {
-      const s = nombres.get(p.categoria_id) || SIN_SECCION
-      if (!m.has(s)) m.set(s, [])
-      m.get(s).push(p)
-    }
-    for (const lista of m.values()) lista.sort((a, b) => (b.disponible === true) - (a.disponible === true))
-    return [...m.entries()].sort((a, b) => (a[0] === SIN_SECCION ? 1 : b[0] === SIN_SECCION ? -1 : a[0].localeCompare(b[0])))
+    return agruparCatalogo(filtrados, (p) => nombres.get(p.categoria_id), SIN_SECCION)
   }, [filtrados, categories])
 
   const totalItems = items.reduce((sum, i) => sum + i.cantidad, 0)
@@ -88,14 +83,21 @@ export default function Catalog() {
       ) : secciones.length === 0 ? (
         <p className="text-center text-gray-400 py-10">No se encontraron productos.</p>
       ) : (
-        secciones.map(([seccion, lista]) => (
-          <section key={seccion} className="mb-7">
-            <h2 className="font-bold text-petroleo uppercase tracking-wide text-sm mb-3">
-              {seccion} <span className="text-gray-400 font-normal">· {lista.length}</span>
+        secciones.map(([seccion, tamanos]) => (
+          <section key={seccion} className="mb-8">
+            <h2 className="font-bold text-petroleo uppercase tracking-wide text-sm mb-1 pb-1 border-b-2 border-dorado/40">
+              {seccion}
             </h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {lista.map((p) => <ProductCard key={p.id} product={p} onAdd={addItem} />)}
-            </div>
+            {tamanos.map(([oz, lista]) => (
+              <div key={String(oz)} className="mt-4">
+                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                  {etiquetaTamano(oz)} <span className="font-normal">· {lista.length}</span>
+                </h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {lista.map((p) => <ProductCard key={p.id} product={p} onAdd={addItem} />)}
+                </div>
+              </div>
+            ))}
           </section>
         ))
       )}

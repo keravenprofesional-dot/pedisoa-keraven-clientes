@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabaseClient'
 import { formatMoney } from '../../utils/format'
 import { leerExcel, descargarExcel } from '../../utils/excel'
 import { codigoUnico, normalizar } from '../../utils/codigoProducto'
+import { agruparCatalogo, etiquetaTamano } from '../../utils/ordenProducto'
 
 const vacio = { codigo: '', nombre: '', descripcion: '', precio: '', seccion: '', disponible: true }
 const SIN_SECCION = 'Sin sección'
@@ -271,15 +272,11 @@ export default function Products() {
     return products.filter((p) => normalizar(p.nombre).includes(q) || (p.codigo || '').toUpperCase().includes(q))
   }, [products, busqueda])
 
-  const porSeccion = useMemo(() => {
-    const m = new Map()
-    for (const p of productosFiltrados) {
-      const s = seccionDe(p)
-      if (!m.has(s)) m.set(s, [])
-      m.get(s).push(p)
-    }
-    return [...m.entries()].sort((a, b) => (a[0] === SIN_SECCION ? 1 : b[0] === SIN_SECCION ? -1 : a[0].localeCompare(b[0])))
-  }, [productosFiltrados])
+  // Mismo orden que ve la clienta: por sección y, dentro, por tamaño.
+  const porSeccion = useMemo(
+    () => agruparCatalogo(productosFiltrados, (p) => p.categories?.nombre, SIN_SECCION),
+    [productosFiltrados]
+  )
 
   const sinPrecio = products.filter((p) => !Number(p.precio)).length
   const sinCodigo = products.filter((p) => !p.codigo).length
@@ -425,17 +422,23 @@ export default function Products() {
         )}
       </div>
 
-      {porSeccion.map(([seccion, items]) => {
+      {porSeccion.map(([seccion, tamanos]) => {
+        const items = tamanos.flatMap(([, lista]) => lista)
         const todos = items.every((p) => marcados.has(p.id))
         return (
           <div key={seccion} className="mb-6">
-            <div className="flex items-center gap-3 mb-2">
+            <div className="flex items-center gap-3 mb-2 pb-1 border-b-2 border-dorado/40">
               <input type="checkbox" className="w-4 h-4 accent-[#123B4A]" checked={todos} onChange={() => marcarSeccion(items, todos)} title="Marcar toda la sección" />
               <h2 className="font-bold text-petroleo uppercase tracking-wide text-sm">{seccion}</h2>
               <span className="text-xs text-gray-400">{items.length}</span>
             </div>
-            <div className="bg-white border border-gray-100 rounded-2xl divide-y divide-gray-100">
-              {items.map((p) => (
+            {tamanos.map(([oz, lista]) => (
+            <div key={String(oz)} className="mt-3">
+            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 ml-1">
+              {etiquetaTamano(oz)} <span className="font-normal">· {lista.length}</span>
+            </h3>
+            <div className="bg-pastelsuave border border-gray-200 rounded-2xl divide-y divide-white/80">
+              {lista.map((p) => (
                 <div key={p.id} className="flex flex-wrap items-center gap-3 p-3">
                   <input type="checkbox" className="w-4 h-4 accent-[#123B4A]" checked={marcados.has(p.id)} onChange={() => marcar(p.id)} />
                   <span className="font-mono font-bold text-petroleo text-sm w-24">{p.codigo || '—'}</span>
@@ -458,6 +461,8 @@ export default function Products() {
                 </div>
               ))}
             </div>
+            </div>
+            ))}
           </div>
         )
       })}
