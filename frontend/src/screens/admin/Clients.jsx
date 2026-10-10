@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Copy, Check, UserPlus, KeyRound, Pencil, UserX, UserCheck } from 'lucide-react'
+import { Copy, Check, UserPlus, KeyRound, Pencil, UserX, UserCheck, MapPin, Plus, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { adminUsuarios } from '../../lib/adminUsuarios'
 import { useAuth } from '../../context/AuthContext'
@@ -14,13 +14,18 @@ const vacio = {
 // Crear clientas (permiso crear_clientas) y, con editar_clientas, cambiar sus
 // datos, su crédito o darle un código nuevo. El código no se guarda legible
 // en ningún lado: se muestra una sola vez al crearlo o regenerarlo.
+const paradaVacia = { nombre: '', zona: '', referencia: '' }
+
 export default function Clients() {
   const { puede } = useAuth()
   const puedeCrear = puede('crear_clientas')
   const puedeEditar = puede('editar_clientas')
+  const puedeParadas = puede('configuracion')
 
   const [clients, setClients] = useState([])
   const [paradas, setParadas] = useState([])
+  const [verParadas, setVerParadas] = useState(false)
+  const [nuevaParada, setNuevaParada] = useState(paradaVacia)
   const [search, setSearch] = useState('')
   const [editando, setEditando] = useState(null) // null | 'nueva' | client
   const [form, setForm] = useState(vacio)
@@ -36,10 +41,37 @@ export default function Clients() {
       supabase.from('clients')
         .select('*, client_phones(phone, is_primary), profiles!clients_profile_id_fkey(active), delivery_stops(nombre, zona)')
         .order('full_name'),
-      supabase.from('delivery_stops').select('id, nombre, zona').eq('activo', true).order('zona').order('nombre'),
+      supabase.from('delivery_stops').select('*').order('zona').order('nombre'),
     ])
     setClients(data || [])
     setParadas(p || [])
+  }
+
+  // ── Paradas de la ruta (aquí, porque es donde se usan al dar de alta) ──
+  async function agregarParada(e) {
+    e.preventDefault()
+    if (!nuevaParada.nombre.trim()) return
+    const { error: err } = await supabase.from('delivery_stops').insert({
+      nombre: nuevaParada.nombre.trim(),
+      zona: nuevaParada.zona.trim() || null,
+      referencia: nuevaParada.referencia.trim() || null,
+    })
+    if (err) return alert('No se pudo agregar la parada')
+    setNuevaParada(paradaVacia)
+    load()
+  }
+  async function alternarParada(p) {
+    await supabase.from('delivery_stops').update({ activo: !p.activo }).eq('id', p.id)
+    load()
+  }
+  async function borrarParada(p) {
+    if (!confirm(`¿Borrar la parada "${p.nombre}"?`)) return
+    const { error: err } = await supabase.from('delivery_stops').delete().eq('id', p.id)
+    if (err?.code === '23503') {
+      await supabase.from('delivery_stops').update({ activo: false }).eq('id', p.id)
+      alert('Esa parada ya tiene clientas o pedidos, así que no se borra: quedó apagada y ya no se puede elegir.')
+    } else if (err) alert('No se pudo borrar la parada')
+    load()
   }
 
   function abrir(c) {
@@ -114,6 +146,48 @@ export default function Clients() {
         )}
       </div>
 
+      {/* Paradas de la ruta: viven aquí porque es donde se usan al dar de alta
+          una clienta. Solo las administra quien tenga permiso de Configuración. */}
+      {puedeParadas && (
+        <div className="bg-white border border-gray-100 rounded-2xl mb-4">
+          <button onClick={() => setVerParadas((v) => !v)} className="w-full flex items-center gap-2 p-3 text-left">
+            <MapPin size={18} className="text-petroleo" />
+            <span className="font-semibold text-grafondo">Paradas de la ruta</span>
+            <span className="text-sm text-gray-400">{paradas.filter((p) => p.activo).length} activa(s)</span>
+            <span className="ml-auto text-gray-400">{verParadas ? <ChevronUp size={18} /> : <ChevronDown size={18} />}</span>
+          </button>
+          {verParadas && (
+            <div className="px-3 pb-3">
+              <p className="text-sm text-gray-500 mb-3">
+                Los pueblos o puntos donde entregas. A cada clienta se le asigna una abajo, y es la que
+                le aparece puesta al hacer su pedido.
+              </p>
+              <form onSubmit={agregarParada} className="grid grid-cols-1 md:grid-cols-4 gap-2 mb-3">
+                <input required placeholder="Nombre (ej. Parada Bonao)" value={nuevaParada.nombre} onChange={(e) => setNuevaParada({ ...nuevaParada, nombre: e.target.value })} className="border border-gray-200 rounded-lg px-3 py-2" />
+                <input placeholder="Zona o ruta" value={nuevaParada.zona} onChange={(e) => setNuevaParada({ ...nuevaParada, zona: e.target.value })} className="border border-gray-200 rounded-lg px-3 py-2" />
+                <input placeholder="Punto de referencia" value={nuevaParada.referencia} onChange={(e) => setNuevaParada({ ...nuevaParada, referencia: e.target.value })} className="border border-gray-200 rounded-lg px-3 py-2" />
+                <button className="flex items-center justify-center gap-1 bg-petroleo text-white rounded-lg py-2 font-semibold text-sm"><Plus size={16} /> Agregar</button>
+              </form>
+              <div className="divide-y divide-gray-100 border border-gray-100 rounded-xl">
+                {paradas.map((p) => (
+                  <div key={p.id} className={`flex items-center gap-3 p-2.5 text-sm ${p.activo ? '' : 'opacity-50'}`}>
+                    <div className="flex-1">
+                      <p className="font-medium">{p.nombre}</p>
+                      <p className="text-gray-500 text-xs">{[p.zona, p.referencia].filter(Boolean).join(' · ') || 'Sin zona'}</p>
+                    </div>
+                    <button onClick={() => alternarParada(p)} className={`rounded-lg px-2 py-1 border text-xs font-semibold ${p.activo ? 'text-green-700 border-green-200' : 'text-gray-500 border-gray-300'}`}>
+                      {p.activo ? 'Activa' : 'Apagada'}
+                    </button>
+                    <button onClick={() => borrarParada(p)} className="text-gray-400 hover:text-red-500" title="Borrar"><Trash2 size={15} /></button>
+                  </div>
+                ))}
+                {paradas.length === 0 && <p className="text-gray-400 text-sm p-3">Todavía no hay paradas.</p>}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {codigo && (
         <div className="bg-dorado/10 border border-dorado rounded-xl p-4 mb-4">
           <p className="text-sm text-grafondo">
@@ -143,7 +217,7 @@ export default function Clients() {
           <label className="text-sm md:col-span-3">Parada donde recibe
             <select value={form.delivery_stop_id} onChange={(e) => setForm({ ...form, delivery_stop_id: e.target.value })} className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2">
               <option value="">Sin parada fija (la elige al pedir)</option>
-              {paradas.map((p) => <option key={p.id} value={p.id}>{p.nombre}{p.zona ? ` — ${p.zona}` : ''}</option>)}
+              {paradas.filter((p) => p.activo).map((p) => <option key={p.id} value={p.id}>{p.nombre}{p.zona ? ` — ${p.zona}` : ''}</option>)}
             </select>
           </label>
           {puedeEditar && (
@@ -182,9 +256,9 @@ export default function Clients() {
       <p className="text-sm text-gray-500 mb-2">{filtered.length} clienta(s)</p>
 
       {/* Renglones en computadora: con muchas clientas se lee de un vistazo */}
-      <div className="hidden md:block bg-white border border-gray-100 rounded-2xl overflow-hidden">
+      <div className="hidden md:block bg-pastelsuave border border-gray-200 rounded-2xl overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-graclaro text-gray-500 text-left">
+          <thead className="bg-pastel text-petroleo text-left">
             <tr>
               <th className="p-3">N°</th><th className="p-3">Nombre</th><th className="p-3">Teléfono</th>
               <th className="p-3">Sector / Ciudad</th><th className="p-3">Parada</th>
@@ -196,7 +270,7 @@ export default function Clients() {
             {filtered.map((c) => {
               const activa = c.profiles?.active !== false
               return (
-                <tr key={c.id} className={`border-t border-gray-100 ${activa ? '' : 'opacity-50'}`}>
+                <tr key={c.id} className={`border-t border-white/80 even:bg-pastel/50 hover:bg-pastel ${activa ? '' : 'opacity-50'}`}>
                   <td className="p-3 font-bold text-petroleo whitespace-nowrap">{c.client_number}</td>
                   <td className="p-3">
                     {c.full_name}
@@ -232,11 +306,11 @@ export default function Clients() {
       </div>
 
       {/* En celular: un renglón por clienta, compacto */}
-      <div className="md:hidden divide-y divide-gray-100 bg-white border border-gray-100 rounded-2xl">
+      <div className="md:hidden divide-y divide-white/80 bg-pastelsuave border border-gray-200 rounded-2xl overflow-hidden">
         {filtered.map((c) => {
           const activa = c.profiles?.active !== false
           return (
-            <div key={c.id} className={`p-3 ${activa ? '' : 'opacity-50'}`}>
+            <div key={c.id} className={`p-3 even:bg-pastel/50 ${activa ? '' : 'opacity-50'}`}>
               <div className="flex justify-between gap-2">
                 <span className="font-semibold">{c.full_name}</span>
                 <span className="text-xs font-bold text-petroleo whitespace-nowrap">{c.client_number}</span>
