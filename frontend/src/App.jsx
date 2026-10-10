@@ -5,7 +5,7 @@ import { MENU_ADMIN } from './utils/menuAdmin'
 import ClientLayout from './layouts/ClientLayout'
 import AdminLayout from './layouts/AdminLayout'
 
-import Login from './screens/clienta/Login'
+import Entrada from './screens/Entrada'
 import Home from './screens/clienta/Home'
 import Catalog from './screens/clienta/Catalog'
 import Cart from './screens/clienta/Cart'
@@ -14,7 +14,6 @@ import MyOrders from './screens/clienta/MyOrders'
 import OrderDetail from './screens/clienta/OrderDetail'
 import Profile from './screens/clienta/Profile'
 
-import LoginPersonal from './screens/admin/LoginPersonal'
 import Dashboard from './screens/admin/Dashboard'
 import OrdersBoard from './screens/admin/OrdersBoard'
 import Dispatch from './screens/admin/Dispatch'
@@ -38,9 +37,9 @@ const PANTALLAS = {
 export default function App() {
   return (
     <Routes>
-      {/* Dos puertas separadas */}
-      <Route path="/login" element={<Login />} />
-      <Route path="/personal" element={<LoginPersonal />} />
+      {/* Una sola entrada con dos pestañas: clienta o personal */}
+      <Route path="/login" element={<Entrada inicio="clienta" />} />
+      <Route path="/personal" element={<Entrada inicio="personal" />} />
 
       {/* Clienta */}
       <Route element={<ProtectedRoute tipo="clienta"><ClientLayout /></ProtectedRoute>}>

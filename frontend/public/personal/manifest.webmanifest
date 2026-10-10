@@ -1,0 +1,16 @@
+{
+  "name": "Keraven Personal",
+  "short_name": "Personal",
+  "description": "Panel del personal de Keraven Profesional",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#C9A227",
+  "theme_color": "#C9A227",
+  "lang": "es-DO",
+  "icons": [
+    { "src": "../icono-personal-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "../icono-personal-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "../icono-personal-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
