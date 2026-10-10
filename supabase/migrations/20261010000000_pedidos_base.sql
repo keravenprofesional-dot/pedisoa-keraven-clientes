@@ -100,6 +100,13 @@ returns boolean language sql stable security definer set search_path = public as
   select coalesce((select active and tipo = 'personal' from profiles where id = auth.uid()), false);
 $$;
 
+-- Cualquier cuenta registrada por Keraven (personal o clienta) y activa.
+-- Una cuenta creada por fuera (sin perfil) no ve nada.
+create or replace function es_usuario_activo()
+returns boolean language sql stable security definer set search_path = public as $$
+  select coalesce((select active from profiles where id = auth.uid()), false);
+$$;
+
 -- Lista de permisos del usuario conectado (la usa la app para el menú).
 create or replace function mis_permisos()
 returns setof text language sql stable security definer set search_path = public as $$
@@ -270,10 +277,14 @@ for each row execute function log_order_status();
 
 -- El personal solo puede cambiar el ESTADO de un pedido; montos, clienta y
 -- fecha quedan fijos. Al cancelar, se devuelve la existencia y el balance.
+-- Excepciones: mantenimiento interno (sin usuario) y registrar_pago(), que
+-- baja el balance marcando keraven.pago_en_curso dentro de su transacción.
 create or replace function proteger_pedido()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin
-  if auth.uid() is null then return new; end if;  -- mantenimiento interno
+  if auth.uid() is null or current_setting('keraven.pago_en_curso', true) = 'si' then
+    return new;
+  end if;
   if (new.client_id, new.subtotal, new.descuento, new.envio, new.total, new.payment_method,
       new.avance, new.balance, new.created_at, new.order_number)
      is distinct from
@@ -429,56 +440,6 @@ begin
   insert into payments (order_id, monto, metodo, registrado_por)
   values (p_order_id, p_monto, coalesce(nullif(trim(p_metodo), ''), 'efectivo'), auth.uid())
   returning * into pago;
-  update orders set balance = balance - p_monto where id = p_order_id;
-  update clients set balance_pendiente = greatest(balance_pendiente - p_monto, 0) where id = ord.client_id;
-  return pago;
-end;
-$$;
-revoke all on function registrar_pago(uuid, numeric, text) from public;
-grant execute on function registrar_pago(uuid, numeric, text) to authenticated;
-
--- registrar_pago cambia el balance desde dentro (auth.uid() existe), así que
--- se le permite saltar la protección de montos solo a esa función.
-create or replace function proteger_pedido()
-returns trigger language plpgsql security definer set search_path = public as $$
-begin
-  if auth.uid() is null or current_setting('keraven.pago_en_curso', true) = 'si' then
-    return new;
-  end if;
-  if (new.client_id, new.subtotal, new.descuento, new.envio, new.total, new.payment_method,
-      new.avance, new.balance, new.created_at, new.order_number)
-     is distinct from
-     (old.client_id, old.subtotal, old.descuento, old.envio, old.total, old.payment_method,
-      old.avance, old.balance, old.created_at, old.order_number) then
-    raise exception 'Solo se puede cambiar el estado del pedido';
-  end if;
-  if old.status = 'cancelado' and new.status <> 'cancelado' then
-    raise exception 'Un pedido cancelado no se puede reabrir; la clienta debe hacer uno nuevo';
-  end if;
-  if new.status = 'cancelado' and old.status <> 'cancelado' then
-    update products p set stock = p.stock + oi.cantidad
-      from order_items oi where oi.order_id = new.id and oi.product_id = p.id;
-    update clients set balance_pendiente = greatest(balance_pendiente - old.balance, 0)
-      where id = new.client_id;
-  end if;
-  return new;
-end;
-$$;
-
-create or replace function registrar_pago(p_order_id uuid, p_monto numeric, p_metodo text)
-returns payments language plpgsql security definer set search_path = public as $$
-declare ord orders; pago payments;
-begin
-  if not tiene_permiso('registrar_pagos') then raise exception 'No tienes permiso para registrar pagos'; end if;
-  select * into ord from orders where id = p_order_id for update;
-  if ord.id is null then raise exception 'Pedido no encontrado'; end if;
-  if ord.status = 'cancelado' then raise exception 'El pedido está cancelado'; end if;
-  if p_monto is null or p_monto <= 0 or p_monto > ord.balance then
-    raise exception 'El pago debe ser mayor que 0 y no mayor que el balance (%)', ord.balance;
-  end if;
-  insert into payments (order_id, monto, metodo, registrado_por)
-  values (p_order_id, p_monto, coalesce(nullif(trim(p_metodo), ''), 'efectivo'), auth.uid())
-  returning * into pago;
   perform set_config('keraven.pago_en_curso', 'si', true);
   update orders set balance = balance - p_monto where id = p_order_id;
   perform set_config('keraven.pago_en_curso', 'no', true);
@@ -486,6 +447,8 @@ begin
   return pago;
 end;
 $$;
+revoke all on function registrar_pago(uuid, numeric, text) from public;
+grant execute on function registrar_pago(uuid, numeric, text) to authenticated;
 
 -- ---------- 8. CONFIGURACIÓN --------------------------------------------
 
@@ -559,17 +522,17 @@ create policy addresses_leer on client_addresses for select to authenticated usi
 );
 
 -- Catálogo: lo leen todos los conectados; lo escribe quien tenga "productos".
-create policy categories_leer    on categories for select to authenticated using (true);
+create policy categories_leer    on categories for select to authenticated using (es_usuario_activo());
 create policy categories_escribir on categories for all to authenticated using (tiene_permiso('productos')) with check (tiene_permiso('productos'));
-create policy products_leer      on products for select to authenticated using (true);
+create policy products_leer      on products for select to authenticated using (es_usuario_activo());
 create policy products_escribir  on products for all to authenticated using (tiene_permiso('productos')) with check (tiene_permiso('productos'));
 
 -- Paradas, bancos y empresa: lectura para conectados; escritura con "configuracion".
-create policy stops_leer     on delivery_stops for select to authenticated using (true);
+create policy stops_leer     on delivery_stops for select to authenticated using (es_usuario_activo());
 create policy stops_escribir on delivery_stops for all to authenticated using (tiene_permiso('configuracion')) with check (tiene_permiso('configuracion'));
-create policy bank_leer      on bank_accounts for select to authenticated using (true);
+create policy bank_leer      on bank_accounts for select to authenticated using (es_usuario_activo());
 create policy bank_escribir  on bank_accounts for all to authenticated using (tiene_permiso('configuracion')) with check (tiene_permiso('configuracion'));
-create policy settings_leer  on company_settings for select to authenticated using (true);
+create policy settings_leer  on company_settings for select to authenticated using (es_usuario_activo());
 create policy settings_escribir on company_settings for update to authenticated using (tiene_permiso('configuracion')) with check (tiene_permiso('configuracion'));
 
 -- Pedidos: la clienta ve los suyos; el personal con permiso ve todos.
