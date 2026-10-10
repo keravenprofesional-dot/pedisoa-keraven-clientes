@@ -43,14 +43,27 @@ export function AuthProvider({ children }) {
   }, [])
 
   useEffect(() => {
+    // Quién está conectado AHORA. Sirve para no recargar de gusto.
+    let quienEs = undefined
+
     supabase.auth.getSession().then(({ data }) => {
+      const id = data.session?.user?.id ?? null
+      quienEs = id
       setSession(data.session)
-      cargar(data.session?.user?.id)
+      cargar(id)
     })
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, sess) => {
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_evento, sess) => {
+      const id = sess?.user?.id ?? null
       setSession(sess)
+      // Supabase avisa también cuando renueva la sesión sola o cuando vuelves
+      // a la pestaña. Si sigue siendo la misma persona no hay que recargar
+      // nada: recargar apagaba la pantalla y te borraba lo que estabas
+      // escribiendo.
+      if (id === quienEs) return
+      quienEs = id
       // Se difiere para no llamar a Supabase dentro de su propio aviso.
-      setTimeout(() => cargar(sess?.user?.id), 0)
+      setTimeout(() => cargar(id), 0)
     })
     return () => listener.subscription.unsubscribe()
   }, [cargar])
