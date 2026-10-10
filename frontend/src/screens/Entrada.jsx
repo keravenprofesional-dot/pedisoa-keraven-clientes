@@ -41,7 +41,7 @@ export default function Entrada({ inicio = 'clienta' }) {
     } catch {
       setError(esPersonal
         ? 'Usuario o teléfono incorrecto.'
-        : 'Teléfono o código incorrecto. Verifica con Keraven Profesional.')
+        : 'Teléfono o código incorrecto. Verifícalo con Keraven Profesional.')
       setEnviando(false)
     }
   }
@@ -65,8 +65,8 @@ export default function Entrada({ inicio = 'clienta' }) {
 
       <div className="w-full max-w-sm bg-white rounded-2xl shadow-sm overflow-hidden">
         <div className="flex">
-          {tab('clienta', User, 'Soy clienta')}
-          {tab('personal', ShieldCheck, 'Soy del personal')}
+          {tab('clienta', User, 'Cliente o clienta')}
+          {tab('personal', ShieldCheck, 'Administrador')}
         </div>
 
         <form onSubmit={entrar} className="flex flex-col gap-4 p-6">
@@ -86,7 +86,7 @@ export default function Entrada({ inicio = 'clienta' }) {
           ) : (
             <>
               <div>
-                <label className="text-sm font-medium text-grafondo">Tu teléfono o tu número de clienta</label>
+                <label className="text-sm font-medium text-grafondo">Tu teléfono o tu número de cliente</label>
                 <input type="text" inputMode="tel" required autoComplete="tel"
                   placeholder="809-555-0000  ó  CL-000002" value={uno} onChange={(e) => setUno(e.target.value)} className={campo} />
               </div>
@@ -113,7 +113,7 @@ export default function Entrada({ inicio = 'clienta' }) {
 
       {!esPersonal && (
         <p className="text-xs text-gray-400 mt-6 text-center max-w-xs">
-          Keraven Profesional te entrega tu código de acceso al registrarte como clienta.
+          Keraven Profesional te entrega tu código de acceso al registrarte.
           Si no lo tienes o lo perdiste, comunícate con nosotros.
         </p>
       )}

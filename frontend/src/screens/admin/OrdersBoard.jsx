@@ -68,7 +68,7 @@ export default function OrdersBoard() {
       <h1 className="text-2xl font-bold text-grafondo mb-4">Pedidos</h1>
 
       <div className="flex flex-col md:flex-row gap-3 mb-4">
-        <input placeholder="Buscar por Nº de pedido, nombre, Nº de clienta o teléfono…" value={search} onChange={(e) => setSearch(e.target.value)} className="flex-1 border border-gray-200 rounded-xl px-4 py-2" />
+        <input placeholder="Buscar por Nº de pedido, nombre, Nº de cliente o teléfono…" value={search} onChange={(e) => setSearch(e.target.value)} className="flex-1 border border-gray-200 rounded-xl px-4 py-2" />
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="border border-gray-200 rounded-xl px-4 py-2">
           <option value="all">Todos los estados</option>
           {ESTADOS.map((s) => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
@@ -80,7 +80,7 @@ export default function OrdersBoard() {
         <table className="w-full text-sm">
           <thead className="bg-graclaro text-gray-500 text-left">
             <tr>
-              <th className="p-3">Pedido</th><th className="p-3">Clienta</th><th className="p-3">Fecha</th>
+              <th className="p-3">Pedido</th><th className="p-3">Cliente</th><th className="p-3">Fecha</th>
               <th className="p-3">Total</th><th className="p-3">Debe</th><th className="p-3">Estado</th><th className="p-3"></th>
             </tr>
           </thead>

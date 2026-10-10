@@ -404,7 +404,7 @@ export default function Products() {
           </label>
           <label className="flex items-center gap-2 text-sm md:col-span-3">
             <input type="checkbox" className="w-5 h-5 accent-[#123B4A]" checked={form.disponible} onChange={(e) => setForm({ ...form, disponible: e.target.checked })} />
-            Disponible (si lo apagas, la clienta lo ve marcado como agotado y no lo puede pedir)
+            Disponible (si lo apagas, el cliente lo ve marcado como agotado y no lo puede pedir)
           </label>
           <div className="md:col-span-3 flex gap-2">
             <button className="bg-petroleo text-white rounded-lg px-4 py-2 font-semibold">Guardar</button>

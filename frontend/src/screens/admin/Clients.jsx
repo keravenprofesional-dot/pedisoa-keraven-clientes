@@ -69,7 +69,7 @@ export default function Clients() {
     const { error: err } = await supabase.from('delivery_stops').delete().eq('id', p.id)
     if (err?.code === '23503') {
       await supabase.from('delivery_stops').update({ activo: false }).eq('id', p.id)
-      alert('Esa parada ya tiene clientas o pedidos, así que no se borra: quedó apagada y ya no se puede elegir.')
+      alert('Esa parada ya tiene clientes o pedidos, así que no se borra: quedó apagada y ya no se puede elegir.')
     } else if (err) alert('No se pudo borrar la parada')
     load()
   }
@@ -138,16 +138,16 @@ export default function Clients() {
   return (
     <div className="p-4 md:p-8">
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-bold text-grafondo">Clientas</h1>
+        <h1 className="text-2xl font-bold text-grafondo">Clientes</h1>
         {puedeCrear && (
           <button onClick={() => abrir('nueva')} className="flex items-center gap-2 bg-petroleo text-white text-sm font-semibold rounded-xl px-4 py-2">
-            <UserPlus size={16} /> Nueva clienta
+            <UserPlus size={16} /> Nuevo cliente
           </button>
         )}
       </div>
 
       {/* Paradas de la ruta: viven aquí porque es donde se usan al dar de alta
-          una clienta. Solo las administra quien tenga permiso de Configuración. */}
+          un cliente. Solo las administra quien tenga permiso de Configuración. */}
       {puedeParadas && (
         <div className="bg-white border border-gray-100 rounded-2xl mb-4">
           <button onClick={() => setVerParadas((v) => !v)} className="w-full flex items-center gap-2 p-3 text-left">
@@ -159,7 +159,7 @@ export default function Clients() {
           {verParadas && (
             <div className="px-3 pb-3">
               <p className="text-sm text-gray-500 mb-3">
-                Los pueblos o puntos donde entregas. A cada clienta se le asigna una abajo, y es la que
+                Los pueblos o puntos donde entregas. A cada cliente se le asigna una abajo, y es la que
                 le aparece puesta al hacer su pedido.
               </p>
               <form onSubmit={agregarParada} className="grid grid-cols-1 md:grid-cols-4 gap-2 mb-3">
@@ -204,7 +204,7 @@ export default function Clients() {
 
       {editando && (
         <form onSubmit={guardar} className="bg-white border border-gray-100 rounded-2xl p-4 mb-6 grid grid-cols-1 md:grid-cols-3 gap-3">
-          <h2 className="md:col-span-3 font-semibold">{editando === 'nueva' ? 'Nueva clienta' : `Editar ${editando.client_number}`}</h2>
+          <h2 className="md:col-span-3 font-semibold">{editando === 'nueva' ? 'Nuevo cliente' : `Editar ${editando.client_number}`}</h2>
           {campo('full_name', 'Nombre completo', { required: true })}
           {campo('phone', 'Teléfono (con este entra)', { required: true, inputMode: 'tel' })}
           {campo('phone2', 'Segundo teléfono (opcional)', { inputMode: 'tel' })}
@@ -239,7 +239,7 @@ export default function Clients() {
           {error && <p className="text-red-500 text-sm md:col-span-3">{error}</p>}
           <div className="md:col-span-3 flex gap-2">
             <button disabled={guardando} className="bg-petroleo text-white rounded-lg px-4 py-2 font-semibold disabled:opacity-60">
-              {guardando ? 'Guardando…' : editando === 'nueva' ? 'Crear clienta y generar código' : 'Guardar cambios'}
+              {guardando ? 'Guardando…' : editando === 'nueva' ? 'Crear cliente y generar código' : 'Guardar cambios'}
             </button>
             <button type="button" onClick={() => setEditando(null)} className="text-gray-500 px-4 py-2">Cancelar</button>
           </div>
@@ -247,13 +247,13 @@ export default function Clients() {
       )}
 
       <input
-        placeholder="Buscar por nombre, número de clienta o teléfono…"
+        placeholder="Buscar por nombre, número de cliente o teléfono…"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         className="w-full md:w-96 border border-gray-200 rounded-xl px-4 py-2 mb-4"
       />
 
-      <p className="text-sm text-gray-500 mb-2">{filtered.length} clienta(s)</p>
+      <p className="text-sm text-gray-500 mb-2">{filtered.length} cliente(s)</p>
 
       {/* Renglones en computadora: con muchas clientas se lee de un vistazo */}
       <div className="hidden md:block bg-pastelsuave border border-gray-200 rounded-2xl overflow-hidden">
@@ -331,7 +331,7 @@ export default function Clients() {
         })}
       </div>
 
-      {filtered.length === 0 && <p className="text-gray-400 text-center py-10">No hay clientas todavía.</p>}
+      {filtered.length === 0 && <p className="text-gray-400 text-center py-10">No hay clientes todavía.</p>}
     </div>
   )
 }

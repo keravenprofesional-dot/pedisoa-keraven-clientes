@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabaseClient'
 const CAMPOS = [
   ['nombre', 'Nombre de la empresa'],
   ['telefono', 'Teléfono'],
-  ['whatsapp', 'WhatsApp (el que ven las clientas)'],
+  ['whatsapp', 'WhatsApp (el que ven los clientes)'],
   ['correo', 'Correo'],
   ['direccion', 'Dirección'],
 ]
@@ -64,7 +64,7 @@ export default function Settings() {
       </form>
 
       <h2 className="font-bold text-grafondo mb-1">Cuentas bancarias</h2>
-      <p className="text-sm text-gray-500 mb-3">Las clientas las ven en su recibo para poder transferir.</p>
+      <p className="text-sm text-gray-500 mb-3">Los clientes las ven en su recibo para poder transferir.</p>
       <form onSubmit={addBank} className="bg-white border border-gray-100 rounded-2xl p-4 mb-4 grid grid-cols-1 md:grid-cols-2 gap-3">
         <input required placeholder="Banco" value={newBank.banco} onChange={(e) => setNewBank({ ...newBank, banco: e.target.value })} className={input} />
         <select required value={newBank.tipo_cuenta} onChange={(e) => setNewBank({ ...newBank, tipo_cuenta: e.target.value })} className={input}>

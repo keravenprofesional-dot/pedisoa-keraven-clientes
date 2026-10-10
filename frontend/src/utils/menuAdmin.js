@@ -7,7 +7,7 @@ export const MENU_ADMIN = [
   { to: '/admin/resumen', icon: LayoutDashboard, label: 'Resumen', permiso: ['ver_resumen'] },
   { to: '/admin/pedidos', icon: ShoppingCart, label: 'Pedidos', permiso: ['ver_pedidos'] },
   { to: '/admin/despacho', icon: Truck, label: 'Despacho', permiso: ['despacho'] },
-  { to: '/admin/clientas', icon: Users, label: 'Clientas', permiso: ['ver_clientas', 'crear_clientas'] },
+  { to: '/admin/clientas', icon: Users, label: 'Clientes', permiso: ['ver_clientas', 'crear_clientas'] },
   { to: '/admin/productos', icon: Package, label: 'Productos', permiso: ['productos'] },
   { to: '/admin/configuracion', icon: Settings, label: 'Configuración', permiso: ['configuracion'] },
   { to: '/admin/usuarios', icon: UserCog, label: 'Usuarios', supremo: true },
