@@ -63,11 +63,6 @@ export default function Settings() {
         <button className="bg-petroleo text-white rounded-lg py-2 font-semibold">Guardar</button>
       </form>
 
-      <p className="bg-graclaro border border-gray-200 text-sm text-gray-600 rounded-xl p-3 mb-6">
-        Las <strong>paradas de la ruta</strong> se administran en la pantalla de <strong>Clientas</strong>,
-        que es donde se le asigna una a cada quien.
-      </p>
-
       <h2 className="font-bold text-grafondo mb-1">Cuentas bancarias</h2>
       <p className="text-sm text-gray-500 mb-3">Las clientas las ven en su recibo para poder transferir.</p>
       <form onSubmit={addBank} className="bg-white border border-gray-100 rounded-2xl p-4 mb-4 grid grid-cols-1 md:grid-cols-2 gap-3">
