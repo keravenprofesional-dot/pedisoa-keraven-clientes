@@ -1,0 +1,42 @@
+# Publica el programa de pedidos en GitHub Pages cada vez que se sube un cambio.
+# La URL y la llave pública (anon) de Supabase van en Settings → Secrets and
+# variables → Actions → Variables: SUPABASE_URL y SUPABASE_ANON_KEY.
+# (La llave anon es pública por diseño; la seguridad la ponen las reglas RLS.)
+name: Publicar programa de pedidos
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: true
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+        working-directory: frontend
+      - run: npm run build
+        working-directory: frontend
+        env:
+          VITE_SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: frontend/dist
+      - id: deploy
+        uses: actions/deploy-pages@v4
