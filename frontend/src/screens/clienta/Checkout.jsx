@@ -30,7 +30,13 @@ export default function Checkout() {
 
   useEffect(() => {
     if (!client) return
-    supabase.from('delivery_stops').select('*').eq('activo', true).then(({ data }) => setStops(data || []))
+    supabase.from('delivery_stops').select('*').eq('activo', true).order('nombre').then(({ data }) => {
+      setStops(data || [])
+      // Su parada de siempre ya viene puesta; igual puede cambiarla.
+      if (client.delivery_stop_id && (data || []).some((s) => s.id === client.delivery_stop_id)) {
+        setStopId(client.delivery_stop_id)
+      }
+    })
     supabase.from('client_addresses').select('*').eq('client_id', client.id).then(({ data }) => setAddresses(data || []))
   }, [client])
 

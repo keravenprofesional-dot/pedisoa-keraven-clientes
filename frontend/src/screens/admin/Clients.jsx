@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Copy, Check, UserPlus, KeyRound, Pencil } from 'lucide-react'
+import { Copy, Check, UserPlus, KeyRound, Pencil, UserX, UserCheck } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { adminUsuarios } from '../../lib/adminUsuarios'
 import { useAuth } from '../../context/AuthContext'
@@ -8,7 +8,7 @@ import { formatCode } from '../../utils/accessCode'
 
 const vacio = {
   full_name: '', phone: '', phone2: '', correo: '', cedula: '', direccion: '',
-  sector: '', ciudad: '', provincia: '', payment_condition: 'contado', credit_enabled: false, credit_limit: 0,
+  sector: '', ciudad: '', provincia: '', delivery_stop_id: '', payment_condition: 'contado', credit_enabled: false, credit_limit: 0,
 }
 
 // Crear clientas (permiso crear_clientas) y, con editar_clientas, cambiar sus
@@ -20,6 +20,7 @@ export default function Clients() {
   const puedeEditar = puede('editar_clientas')
 
   const [clients, setClients] = useState([])
+  const [paradas, setParadas] = useState([])
   const [search, setSearch] = useState('')
   const [editando, setEditando] = useState(null) // null | 'nueva' | client
   const [form, setForm] = useState(vacio)
@@ -31,11 +32,14 @@ export default function Clients() {
   useEffect(() => { load() }, [])
 
   async function load() {
-    const { data } = await supabase
-      .from('clients')
-      .select('*, client_phones(phone, is_primary), profiles!clients_profile_id_fkey(active)')
-      .order('full_name')
+    const [{ data }, { data: p }] = await Promise.all([
+      supabase.from('clients')
+        .select('*, client_phones(phone, is_primary), profiles!clients_profile_id_fkey(active), delivery_stops(nombre, zona)')
+        .order('full_name'),
+      supabase.from('delivery_stops').select('id, nombre, zona').eq('activo', true).order('zona').order('nombre'),
+    ])
     setClients(data || [])
+    setParadas(p || [])
   }
 
   function abrir(c) {
@@ -136,6 +140,12 @@ export default function Clients() {
           {campo('direccion', 'Dirección', { className: 'border border-gray-200 rounded-lg px-3 py-2 md:col-span-2' })}
           {campo('sector', 'Sector')}
           {campo('ciudad', 'Ciudad o pueblo')}
+          <label className="text-sm md:col-span-3">Parada donde recibe
+            <select value={form.delivery_stop_id} onChange={(e) => setForm({ ...form, delivery_stop_id: e.target.value })} className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2">
+              <option value="">Sin parada fija (la elige al pedir)</option>
+              {paradas.map((p) => <option key={p.id} value={p.id}>{p.nombre}{p.zona ? ` — ${p.zona}` : ''}</option>)}
+            </select>
+          </label>
           {puedeEditar && (
             <>
               <select value={form.payment_condition} onChange={(e) => setForm({ ...form, payment_condition: e.target.value })} className="border border-gray-200 rounded-lg px-3 py-2">
@@ -169,35 +179,85 @@ export default function Clients() {
         className="w-full md:w-96 border border-gray-200 rounded-xl px-4 py-2 mb-4"
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <p className="text-sm text-gray-500 mb-2">{filtered.length} clienta(s)</p>
+
+      {/* Renglones en computadora: con muchas clientas se lee de un vistazo */}
+      <div className="hidden md:block bg-white border border-gray-100 rounded-2xl overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-graclaro text-gray-500 text-left">
+            <tr>
+              <th className="p-3">N°</th><th className="p-3">Nombre</th><th className="p-3">Teléfono</th>
+              <th className="p-3">Sector / Ciudad</th><th className="p-3">Parada</th>
+              <th className="p-3">Condición</th><th className="p-3 text-right">Debe</th>
+              {puedeEditar && <th className="p-3"></th>}
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((c) => {
+              const activa = c.profiles?.active !== false
+              return (
+                <tr key={c.id} className={`border-t border-gray-100 ${activa ? '' : 'opacity-50'}`}>
+                  <td className="p-3 font-bold text-petroleo whitespace-nowrap">{c.client_number}</td>
+                  <td className="p-3">
+                    {c.full_name}
+                    {!activa && <span className="text-xs text-red-500"> · Desactivada</span>}
+                    {c.correo && <div className="text-xs text-gray-400">{c.correo}</div>}
+                  </td>
+                  <td className="p-3 whitespace-nowrap">{c.telefono_login}</td>
+                  <td className="p-3">{[c.sector, c.ciudad].filter(Boolean).join(' — ') || '—'}</td>
+                  <td className="p-3">{c.delivery_stops?.nombre || <span className="text-gray-400">sin asignar</span>}</td>
+                  <td className="p-3 capitalize whitespace-nowrap">
+                    {c.payment_condition}
+                    {c.credit_enabled && <span className="text-green-700 text-xs block">crédito aprobado{Number(c.credit_limit) > 0 && ` · ${formatMoney(c.credit_limit)}`}</span>}
+                  </td>
+                  <td className="p-3 text-right whitespace-nowrap">
+                    {Number(c.balance_pendiente) > 0 ? <span className="text-red-500 font-semibold">{formatMoney(c.balance_pendiente)}</span> : '—'}
+                  </td>
+                  {puedeEditar && (
+                    <td className="p-3">
+                      <div className="flex gap-1 justify-end">
+                        <button onClick={() => abrir(c)} title="Editar" className="text-gray-400 hover:text-petroleo p-1"><Pencil size={16} /></button>
+                        <button onClick={() => nuevoCodigo(c)} title="Darle un código nuevo" className="text-gray-400 hover:text-petroleo p-1"><KeyRound size={16} /></button>
+                        <button onClick={() => activar(c, !activa)} title={activa ? 'Desactivar' : 'Activar'} className={`p-1 ${activa ? 'text-gray-400 hover:text-red-500' : 'text-green-600'}`}>
+                          {activa ? <UserX size={16} /> : <UserCheck size={16} />}
+                        </button>
+                      </div>
+                    </td>
+                  )}
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* En celular: un renglón por clienta, compacto */}
+      <div className="md:hidden divide-y divide-gray-100 bg-white border border-gray-100 rounded-2xl">
         {filtered.map((c) => {
           const activa = c.profiles?.active !== false
           return (
-            <div key={c.id} className={`bg-white border border-gray-100 rounded-xl p-4 ${activa ? '' : 'opacity-60'}`}>
-              <p className="font-semibold">{c.full_name} {!activa && <span className="text-xs text-red-500">· Desactivada</span>}</p>
-              <p className="text-xs text-petroleo font-bold">{c.client_number}</p>
-              <p className="text-sm text-gray-500">{c.client_phones?.map((p) => p.phone).join(', ')}</p>
-              {c.correo && <p className="text-sm text-gray-500">{c.correo}</p>}
-              <p className="text-sm text-gray-500">{[c.sector, c.ciudad].filter(Boolean).join(' — ')}</p>
-              <p className="text-sm mt-2">
-                Condición: <span className="capitalize font-medium">{c.payment_condition}</span>
-                {c.credit_enabled && <span className="text-green-700"> · Crédito aprobado{Number(c.credit_limit) > 0 && ` hasta ${formatMoney(c.credit_limit)}`}</span>}
-                {Number(c.balance_pendiente) > 0 && <span className="text-red-500 font-semibold"> · Debe: {formatMoney(c.balance_pendiente)}</span>}
+            <div key={c.id} className={`p-3 ${activa ? '' : 'opacity-50'}`}>
+              <div className="flex justify-between gap-2">
+                <span className="font-semibold">{c.full_name}</span>
+                <span className="text-xs font-bold text-petroleo whitespace-nowrap">{c.client_number}</span>
+              </div>
+              <p className="text-sm text-gray-500">
+                {c.telefono_login} · {c.delivery_stops?.nombre || 'sin parada'}
+                {Number(c.balance_pendiente) > 0 && <span className="text-red-500 font-semibold"> · debe {formatMoney(c.balance_pendiente)}</span>}
               </p>
               {puedeEditar && (
-                <div className="flex flex-wrap gap-2 mt-3">
-                  <button onClick={() => abrir(c)} className="flex items-center gap-1 text-xs text-petroleo border border-gray-200 rounded-lg px-2 py-1"><Pencil size={13} /> Editar</button>
-                  <button onClick={() => nuevoCodigo(c)} className="flex items-center gap-1 text-xs text-petroleo border border-gray-200 rounded-lg px-2 py-1"><KeyRound size={13} /> Nuevo código</button>
-                  <button onClick={() => activar(c, !activa)} className={`text-xs rounded-lg px-2 py-1 border ${activa ? 'text-red-500 border-red-200' : 'text-green-700 border-green-200'}`}>
-                    {activa ? 'Desactivar' : 'Activar'}
-                  </button>
+                <div className="flex gap-3 mt-2 text-xs">
+                  <button onClick={() => abrir(c)} className="flex items-center gap-1 text-petroleo"><Pencil size={13} /> Editar</button>
+                  <button onClick={() => nuevoCodigo(c)} className="flex items-center gap-1 text-petroleo"><KeyRound size={13} /> Nuevo código</button>
+                  <button onClick={() => activar(c, !activa)} className={activa ? 'text-red-500' : 'text-green-700'}>{activa ? 'Desactivar' : 'Activar'}</button>
                 </div>
               )}
             </div>
           )
         })}
-        {filtered.length === 0 && <p className="text-gray-400 text-center py-10 md:col-span-2">No hay clientas todavía.</p>}
       </div>
+
+      {filtered.length === 0 && <p className="text-gray-400 text-center py-10">No hay clientas todavía.</p>}
     </div>
   )
 }

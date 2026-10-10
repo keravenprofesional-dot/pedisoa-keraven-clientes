@@ -1,9 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Search, ShoppingCart } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import ProductCard from '../../components/ProductCard'
 import { useCart } from '../../context/CartContext'
+import { normalizar } from '../../utils/codigoProducto'
+
+const SIN_SECCION = 'Otros productos'
 
 export default function Catalog() {
   const [products, setProducts] = useState([])
@@ -14,14 +17,13 @@ export default function Catalog() {
   const { addItem, items } = useCart()
   const navigate = useNavigate()
 
-  useEffect(() => {
-    loadData()
-  }, [])
+  useEffect(() => { loadData() }, [])
 
   async function loadData() {
     setLoading(true)
     const [{ data: prods }, { data: cats }] = await Promise.all([
-      supabase.from('products').select('*').order('nombre'),
+      // Un producto sin precio todavía no está a la venta: no se muestra.
+      supabase.from('products').select('*').gt('precio', 0).order('nombre'),
       supabase.from('categories').select('*').order('nombre'),
     ])
     setProducts(prods || [])
@@ -29,11 +31,27 @@ export default function Catalog() {
     setLoading(false)
   }
 
-  const filtered = products.filter((p) => {
-    const matchesCategory = categoryId === 'all' || p.categoria_id === categoryId
-    const matchesQuery = p.nombre.toLowerCase().includes(query.toLowerCase())
-    return matchesCategory && matchesQuery
-  })
+  const filtrados = useMemo(() => {
+    const q = normalizar(query)
+    return products.filter((p) =>
+      (categoryId === 'all' || p.categoria_id === categoryId) &&
+      // La clienta busca por nombre: los códigos son de uso interno.
+      (!q || normalizar(p.nombre).includes(q))
+    )
+  }, [products, categoryId, query])
+
+  // Agrupado por sección, y dentro de cada una lo disponible va primero.
+  const secciones = useMemo(() => {
+    const nombres = new Map(categories.map((c) => [c.id, c.nombre]))
+    const m = new Map()
+    for (const p of filtrados) {
+      const s = nombres.get(p.categoria_id) || SIN_SECCION
+      if (!m.has(s)) m.set(s, [])
+      m.get(s).push(p)
+    }
+    for (const lista of m.values()) lista.sort((a, b) => (b.disponible === true) - (a.disponible === true))
+    return [...m.entries()].sort((a, b) => (a[0] === SIN_SECCION ? 1 : b[0] === SIN_SECCION ? -1 : a[0].localeCompare(b[0])))
+  }, [filtrados, categories])
 
   const totalItems = items.reduce((sum, i) => sum + i.cantidad, 0)
 
@@ -52,15 +70,7 @@ export default function Catalog() {
       </div>
 
       <div className="flex gap-2 overflow-x-auto pb-3 mb-2 -mx-4 px-4">
-        <button
-          onClick={() => setCategoryId('all')}
-          className={`px-4 py-2 rounded-full text-sm whitespace-nowrap ${
-            categoryId === 'all' ? 'bg-petroleo text-white' : 'bg-white border border-gray-200 text-gray-500'
-          }`}
-        >
-          Todos
-        </button>
-        {categories.map((c) => (
+        {[{ id: 'all', nombre: 'Todo' }, ...categories].map((c) => (
           <button
             key={c.id}
             onClick={() => setCategoryId(c.id)}
@@ -75,15 +85,19 @@ export default function Catalog() {
 
       {loading ? (
         <p className="text-gray-400 text-center py-10">Cargando productos…</p>
+      ) : secciones.length === 0 ? (
+        <p className="text-center text-gray-400 py-10">No se encontraron productos.</p>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {filtered.map((p) => (
-            <ProductCard key={p.id} product={p} onAdd={addItem} />
-          ))}
-          {filtered.length === 0 && (
-            <p className="col-span-full text-center text-gray-400 py-10">No se encontraron productos.</p>
-          )}
-        </div>
+        secciones.map(([seccion, lista]) => (
+          <section key={seccion} className="mb-7">
+            <h2 className="font-bold text-petroleo uppercase tracking-wide text-sm mb-3">
+              {seccion} <span className="text-gray-400 font-normal">· {lista.length}</span>
+            </h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {lista.map((p) => <ProductCard key={p.id} product={p} onAdd={addItem} />)}
+            </div>
+          </section>
+        ))
       )}
 
       {totalItems > 0 && (

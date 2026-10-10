@@ -44,14 +44,17 @@ export default function Sidebar() {
   return (
     <>
       <aside className="hidden md:flex flex-col w-64 bg-petroleo text-white min-h-screen p-6 fixed">
-        <div className="mb-10 bg-white rounded-xl p-2"><Logo size="sm" /></div>
+        <div className="mb-10 bg-white rounded-xl p-2 flex items-center gap-2">
+          <Logo size="sm" />
+          <span className="text-petroleo font-bold leading-tight text-sm">Pedidos<br />Keraven</span>
+        </div>
         <nav className="flex-1 space-y-1"><Enlaces /></nav>
         <Pie />
       </aside>
 
       <header className="md:hidden sticky top-0 z-40 bg-petroleo text-white flex items-center justify-between px-4 py-3">
         <button onClick={() => setAbierto(true)} aria-label="Abrir menú"><Menu size={24} /></button>
-        <span className="font-semibold">Keraven · Panel</span>
+        <span className="font-semibold">Pedidos Keraven</span>
         <span className="w-6" />
       </header>
 
@@ -59,7 +62,10 @@ export default function Sidebar() {
         <div className="md:hidden fixed inset-0 z-50 flex">
           <div className="w-72 max-w-[85%] bg-petroleo text-white p-5 flex flex-col">
             <div className="flex items-center justify-between mb-6">
-              <div className="bg-white rounded-xl p-2"><Logo size="sm" /></div>
+              <div className="bg-white rounded-xl p-2 flex items-center gap-2">
+                <Logo size="sm" />
+                <span className="text-petroleo font-bold leading-tight text-sm">Pedidos<br />Keraven</span>
+              </div>
               <button onClick={() => setAbierto(false)} aria-label="Cerrar menú"><X size={24} /></button>
             </div>
             <nav className="flex-1 space-y-1 overflow-y-auto"><Enlaces alElegir={() => setAbierto(false)} /></nav>

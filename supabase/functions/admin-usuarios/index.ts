@@ -182,6 +182,8 @@ function datosClienta(b: Record<string, unknown>, conCredito: boolean) {
   const d: Record<string, unknown> = {
     correo: texto(b.correo, 120), cedula: texto(b.cedula, 20), direccion: texto(b.direccion, 300),
     sector: texto(b.sector, 80), ciudad: texto(b.ciudad, 80), provincia: texto(b.provincia, 80),
+    // Parada de la ruta donde esta clienta recibe normalmente.
+    delivery_stop_id: b.delivery_stop_id ? String(b.delivery_stop_id) : null,
   }
   if (conCredito) {
     const pc = String(b.payment_condition ?? 'contado')

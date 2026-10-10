@@ -1,0 +1,15 @@
+{
+  "name": "keraven-pruebas",
+  "version": "1.0.0",
+  "description": "Pruebas de la base de datos con una copia local de Postgres (no toca Supabase)",
+  "scripts": {
+    "probar": "node pruebas.mjs && node carga.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@electric-sql/pglite": "^0.5.8"
+  }
+}

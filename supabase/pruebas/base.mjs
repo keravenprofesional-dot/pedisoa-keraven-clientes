@@ -1,9 +1,14 @@
-// Arma una base de prueba que imita Supabase (roles anon/authenticated, auth.uid())
-import { PGlite } from '@electric-sql/pglite';
-import fs from 'fs';
-export const MIG = 'C:/Users/User/OneDrive/Desktop/universo keraven/´keraven pedidos/Nueva carpeta/keraven/supabase/migrations/20261010000000_pedidos_base.sql';
+// Arma una base de prueba que imita Supabase (roles anon/authenticated, auth.uid()).
+// Aplica TODAS las migraciones en orden, igual que el Supabase real.
+import { PGlite } from '@electric-sql/pglite'
+import fs from 'fs'
+import path from 'path'
+import { fileURLToPath } from 'url'
+
+export const CARPETA = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'migrations')
+
 export async function nuevaBase() {
-  const db = new PGlite();
+  const db = new PGlite()
   await db.exec(`
     create role anon nologin; create role authenticated nologin; create role service_role nologin bypassrls;
     create schema auth;
@@ -16,15 +21,18 @@ export async function nuevaBase() {
     alter default privileges in schema public grant all on sequences to anon, authenticated, service_role;
     alter default privileges in schema public grant execute on functions to anon, authenticated, service_role;
     grant usage, create on schema public to anon, authenticated, service_role;
-  `);
-  await db.exec(fs.readFileSync(MIG, 'utf8'));
-  return db;
+  `)
+  for (const archivo of fs.readdirSync(CARPETA).filter((f) => f.endsWith('.sql')).sort()) {
+    await db.exec(fs.readFileSync(path.join(CARPETA, archivo), 'utf8'))
+  }
+  return db
 }
+
 // Ejecuta como un usuario conectado (o anon si uid es null)
 export async function como(db, uid, sql, params = []) {
   return db.transaction(async (tx) => {
-    await tx.query(`select set_config('request.jwt.claim.sub', $1, true), set_config('request.jwt.claim.role', $2, true)`, [uid || '', uid ? 'authenticated' : 'anon']);
-    await tx.exec(`set local role ${uid ? 'authenticated' : 'anon'}`);
-    return tx.query(sql, params);
-  });
+    await tx.query(`select set_config('request.jwt.claim.sub', $1, true), set_config('request.jwt.claim.role', $2, true)`, [uid || '', uid ? 'authenticated' : 'anon'])
+    await tx.exec(`set local role ${uid ? 'authenticated' : 'anon'}`)
+    return tx.query(sql, params)
+  })
 }

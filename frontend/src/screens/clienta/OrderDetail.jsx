@@ -66,7 +66,11 @@ export default function OrderDetail() {
           <div className="mt-4 pt-3 border-t text-xs text-gray-500">
             <p className="font-semibold text-grafondo mb-1">CUENTAS BANCARIAS — KERAVEN PROFESIONAL</p>
             {bankAccounts.map((b) => (
-              <p key={b.id}>{b.banco} ({b.tipo_cuenta}) — {b.numero} — {b.titular} — {b.moneda}</p>
+              <p key={b.id} className="mb-1">
+                <strong className="text-grafondo">{b.banco}</strong>
+                {b.tipo_cuenta ? ` · ${b.tipo_cuenta}` : ''}<br />
+                Nº {b.numero} · a nombre de {b.titular} · {b.moneda}
+              </p>
             ))}
           </div>
         )}
