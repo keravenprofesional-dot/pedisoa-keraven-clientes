@@ -30,6 +30,8 @@ export default function Products() {
   const [form, setForm] = useState(vacio)
   const [editando, setEditando] = useState(null) // null | 'nuevo' | id
   const [marcados, setMarcados] = useState(new Set())
+  // Mientras no lo escribas tú, el código se arma solo con el nombre.
+  const [codigoAMano, setCodigoAMano] = useState(false)
   const [previa, setPrevia] = useState(null) // resultado de leer el Excel
   const [trabajando, setTrabajando] = useState('')
   const [aviso, setAviso] = useState('')
@@ -80,8 +82,19 @@ export default function Products() {
     return data?.id || null
   }
 
+  // Códigos ya ocupados, sin contar el producto que se está editando.
+  function codigosOcupados(exceptoId) {
+    return new Set(products.filter((p) => p.id !== exceptoId && p.codigo).map((p) => p.codigo.toUpperCase()))
+  }
+
+  function alEscribirNombre(nombre) {
+    const codigo = codigoAMano ? form.codigo : codigoUnico(nombre, codigosOcupados(editando))
+    setForm({ ...form, nombre, codigo })
+  }
+
   function abrir(p) {
     setAviso('')
+    setCodigoAMano(false)
     if (p === 'nuevo') { setForm(vacio); setEditando('nuevo'); return }
     setForm({
       codigo: p.codigo || '', nombre: p.nombre, descripcion: p.descripcion || '',
@@ -230,6 +243,19 @@ export default function Products() {
     }
   }
 
+  // Para los que ya estaban subidos sin código.
+  async function ponerCodigosFaltantes() {
+    const faltan = products.filter((p) => !p.codigo)
+    if (!faltan.length) return
+    const usados = codigosOcupados(null)
+    const cambios = faltan.map((p) => ({ id: p.id, codigo: codigoUnico(p.nombre, usados) }))
+    setTrabajando(`Poniendo código a ${cambios.length} producto(s)…`)
+    const { error } = await supabase.from('products').upsert(cambios)
+    setTrabajando('')
+    setAviso(error ? 'No se pudieron poner los códigos: ' + error.message : `Listo: ${cambios.length} producto(s) ya tienen su código.`)
+    cargar()
+  }
+
   function exportar() {
     const filas = [['Código', 'Producto', 'Sección', 'Precio (RD$)', 'Disponible']]
     for (const p of productosFiltrados) {
@@ -256,6 +282,7 @@ export default function Products() {
   }, [productosFiltrados])
 
   const sinPrecio = products.filter((p) => !Number(p.precio)).length
+  const sinCodigo = products.filter((p) => !p.codigo).length
   const marcar = (id) => setMarcados((prev) => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s })
   const marcarSeccion = (items, todos) => setMarcados((prev) => {
     const s = new Set(prev)
@@ -285,6 +312,14 @@ export default function Products() {
       {aviso && (
         <p className="bg-green-50 border border-green-200 text-green-900 text-sm rounded-xl p-3 mb-4 flex justify-between gap-3">
           {aviso} <button onClick={() => setAviso('')}><X size={16} /></button>
+        </p>
+      )}
+      {sinCodigo > 0 && !previa && (
+        <p className="flex flex-wrap gap-2 items-center bg-graclaro border border-gray-200 text-sm rounded-xl p-3 mb-4">
+          <span><strong>{sinCodigo} producto(s) sin código corto.</strong></span>
+          <button onClick={ponerCodigosFaltantes} disabled={!!trabajando} className="bg-petroleo text-white rounded-lg px-3 py-1.5 font-semibold text-sm disabled:opacity-50">
+            Ponerles código automático
+          </button>
         </p>
       )}
       {sinPrecio > 0 && !previa && (
@@ -340,10 +375,25 @@ export default function Products() {
         <form onSubmit={guardar} className="bg-white border border-gray-100 rounded-2xl p-4 mb-6 grid grid-cols-1 md:grid-cols-3 gap-3">
           <h2 className="md:col-span-3 font-semibold">{editando === 'nuevo' ? 'Nuevo producto' : 'Editar producto'}</h2>
           <label className="text-sm">Nombre del producto
-            <input required value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2" />
+            <input required autoFocus value={form.nombre} onChange={(e) => alEscribirNombre(e.target.value)} className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2" />
           </label>
-          <label className="text-sm">Código corto
-            <input placeholder="se pone solo" value={form.codigo} onChange={(e) => setForm({ ...form, codigo: e.target.value.toUpperCase() })} className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 font-mono" />
+          <label className="text-sm">
+            Código corto {!codigoAMano && <span className="text-xs text-green-700 font-semibold">· se arma solo</span>}
+            <div className="flex gap-1 mt-1">
+              <input
+                placeholder="escribe el nombre y aparece"
+                value={form.codigo}
+                onChange={(e) => { setCodigoAMano(true); setForm({ ...form, codigo: e.target.value.toUpperCase() }) }}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 font-mono"
+              />
+              {codigoAMano && (
+                <button type="button" title="Volver al código automático"
+                  onClick={() => { setCodigoAMano(false); setForm({ ...form, codigo: codigoUnico(form.nombre, codigosOcupados(editando)) }) }}
+                  className="text-xs text-petroleo border border-gray-200 rounded-lg px-2 whitespace-nowrap">
+                  Auto
+                </button>
+              )}
+            </div>
           </label>
           <label className="text-sm">Sección
             <input list="secciones" value={form.seccion} onChange={(e) => setForm({ ...form, seccion: e.target.value })} className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2" />
