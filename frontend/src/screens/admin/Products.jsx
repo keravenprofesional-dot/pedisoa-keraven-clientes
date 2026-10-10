@@ -25,12 +25,15 @@ export default function Products() {
 
   async function handleSubmit(e) {
     e.preventDefault()
-    const payload = { ...form, precio: Number(form.precio), stock: Number(form.stock) }
-    if (editingId) {
-      await supabase.from('products').update(payload).eq('id', editingId)
-    } else {
-      await supabase.from('products').insert(payload)
+    const payload = {
+      nombre: form.nombre, descripcion: form.descripcion || null, foto_url: form.foto_url || null,
+      categoria_id: form.categoria_id || null, disponible: form.disponible !== false,
+      precio: Number(form.precio), stock: Number(form.stock || 0),
     }
+    const { error } = editingId
+      ? await supabase.from('products').update(payload).eq('id', editingId)
+      : await supabase.from('products').insert(payload)
+    if (error) { alert('No se pudo guardar el producto. Revisa el precio y la existencia.'); return }
     setForm(empty)
     setEditingId(null)
     load()
@@ -43,7 +46,12 @@ export default function Products() {
 
   async function remove(id) {
     if (!confirm('¿Eliminar este producto?')) return
-    await supabase.from('products').delete().eq('id', id)
+    const { error } = await supabase.from('products').delete().eq('id', id)
+    if (error?.code === '23503') {
+      // Ya aparece en pedidos: se oculta del catálogo en vez de borrarlo.
+      await supabase.from('products').update({ disponible: false }).eq('id', id)
+      alert('Este producto ya está en pedidos, así que no se borra: quedó como NO disponible y ya no sale en el catálogo.')
+    } else if (error) alert('No se pudo eliminar el producto.')
     load()
   }
 

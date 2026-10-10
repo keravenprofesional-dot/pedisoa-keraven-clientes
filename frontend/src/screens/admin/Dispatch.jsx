@@ -46,7 +46,8 @@ export default function Dispatch() {
   }
 
   async function setStatus(orderId, status) {
-    await supabase.from('orders').update({ status }).eq('id', orderId)
+    const { error } = await supabase.from('orders').update({ status }).eq('id', orderId)
+    if (error) alert(error.message || 'No se pudo cambiar el estado')
     load()
   }
 

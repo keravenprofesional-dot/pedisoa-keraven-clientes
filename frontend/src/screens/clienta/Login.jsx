@@ -1,25 +1,30 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Logo from '../../components/Logo'
 import { useAuth } from '../../context/AuthContext'
 
+// Puerta de las CLIENTAS: teléfono + código de acceso.
+// El personal entra por otra dirección (/personal), que no se enlaza desde aquí.
 export default function Login() {
-  const { signIn } = useAuth()
+  const { signInClienta, session, profile, loading: cargando } = useAuth()
   const navigate = useNavigate()
-  const [identifier, setIdentifier] = useState('')
+  const [telefono, setTelefono] = useState('')
   const [code, setCode] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (!cargando && session && profile) navigate(profile.tipo === 'personal' ? '/admin' : '/', { replace: true })
+  }, [cargando, session, profile, navigate])
 
   async function handleSubmit(e) {
     e.preventDefault()
     setError('')
     setLoading(true)
     try {
-      await signIn(identifier, code)
-      navigate('/')
-    } catch (err) {
-      setError('Teléfono/correo o código incorrecto. Verifica con Keraven Profesional.')
+      await signInClienta(telefono, code)
+    } catch {
+      setError('Teléfono o código incorrecto. Verifica con Keraven Profesional.')
     } finally {
       setLoading(false)
     }
@@ -32,14 +37,16 @@ export default function Login() {
       <div className="w-full max-w-sm bg-white rounded-2xl shadow-sm p-6">
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div>
-            <label className="text-sm font-medium text-grafondo">Teléfono o correo electrónico</label>
+            <label className="text-sm font-medium text-grafondo">Tu teléfono</label>
             <input
-              type="text"
+              type="tel"
+              inputMode="tel"
               required
               autoFocus
-              placeholder="809-555-0000 o tu@correo.com"
-              value={identifier}
-              onChange={(e) => setIdentifier(e.target.value)}
+              autoComplete="tel"
+              placeholder="809-555-0000"
+              value={telefono}
+              onChange={(e) => setTelefono(e.target.value)}
               className="mt-1 w-full border border-gray-200 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-petroleo"
             />
           </div>
@@ -49,6 +56,7 @@ export default function Login() {
               type="text"
               required
               autoCapitalize="characters"
+              autoComplete="one-time-code"
               placeholder="Ej. 4KX9-PQ2M"
               value={code}
               onChange={(e) => setCode(e.target.value.toUpperCase())}
@@ -57,7 +65,7 @@ export default function Login() {
           </div>
           {error && <p className="text-red-500 text-sm text-center">{error}</p>}
           <button
-            disabled={loading || !identifier || !code}
+            disabled={loading || !telefono || !code}
             className="bg-petroleo text-white rounded-xl py-3 font-semibold active:scale-[0.98] transition disabled:opacity-50"
           >
             {loading ? 'Entrando…' : 'Entrar'}
@@ -66,7 +74,7 @@ export default function Login() {
       </div>
       <p className="text-xs text-gray-400 mt-6 text-center max-w-xs">
         Keraven Profesional te entrega tu código de acceso al registrarte como clienta.
-        Si no lo tienes, comunícate con nosotros.
+        Si no lo tienes o lo perdiste, comunícate con nosotros.
       </p>
     </div>
   )

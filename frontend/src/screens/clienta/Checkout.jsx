@@ -38,41 +38,26 @@ export default function Checkout() {
     setCreating(true)
     setError('')
     try {
-      const { data: order, error: orderErr } = await supabase
-        .from('orders')
-        .insert({
-          client_id: client.id,
-          status: 'recibido',
-          subtotal,
-          descuento: 0,
-          envio,
-          total,
-          payment_method: paymentMethod,
-          avance: paymentMethod === 'avance' ? avanceNum : 0,
-          balance,
-          delivery_method: deliveryMethod,
-          delivery_stop_id: deliveryMethod === 'parada' ? stopId : null,
-          address_id: deliveryMethod === 'envio' ? addressId : null,
-          observaciones,
-        })
-        .select()
-        .single()
+      // El servidor recalcula precios, total y crédito con sus propios datos;
+      // lo que se muestra en pantalla es solo una vista previa.
+      const { data: order, error: orderErr } = await supabase.rpc('crear_pedido', {
+        items: items.map((i) => ({ product_id: i.product.id, cantidad: i.cantidad })),
+        delivery_method: deliveryMethod,
+        delivery_stop_id: deliveryMethod === 'parada' ? stopId : null,
+        address_id: deliveryMethod === 'envio' ? addressId : null,
+        payment_method: paymentMethod,
+        avance: paymentMethod === 'avance' ? avanceNum : null,
+        observaciones,
+      })
       if (orderErr) throw orderErr
-
-      const orderItems = items.map((i) => ({
-        order_id: order.id,
-        product_id: i.product.id,
-        cantidad: i.cantidad,
-        precio_unitario: i.product.precio,
-        subtotal: i.product.precio * i.cantidad,
-      }))
-      const { error: itemsErr } = await supabase.from('order_items').insert(orderItems)
-      if (itemsErr) throw itemsErr
 
       setCreatedOrder(order)
       clearCart()
     } catch (err) {
-      setError('No se pudo crear el pedido. Intenta de nuevo.')
+      // Los mensajes de crear_pedido ya vienen en español y son para la clienta
+      // (sin existencia, sin crédito, límite superado…).
+      const msg = err?.message || ''
+      setError(msg && !/fetch|network|JWT/i.test(msg) ? msg : 'No se pudo crear el pedido. Revisa tu conexión e intenta de nuevo.')
     } finally {
       setCreating(false)
     }
@@ -170,7 +155,7 @@ export default function Checkout() {
           <div className="flex flex-col gap-2 mb-4">
             {[
               { v: 'contado', label: 'Contado (pago total)' },
-              { v: 'avance', label: 'Avance' },
+              { v: 'avance', label: 'Avance (pagas una parte ahora)', disabled: !client?.credit_enabled },
               { v: 'credito', label: 'Crédito', disabled: !client?.credit_enabled },
             ].map((o) => (
               <button
@@ -209,7 +194,8 @@ export default function Checkout() {
 
           <button
             onClick={() => setStep('confirmar')}
-            className="w-full bg-petroleo text-white rounded-xl py-3 font-bold"
+            disabled={paymentMethod === 'avance' && (avanceNum <= 0 || avanceNum >= total)}
+            className="w-full bg-petroleo disabled:bg-gray-300 text-white rounded-xl py-3 font-bold"
           >
             Continuar
           </button>
