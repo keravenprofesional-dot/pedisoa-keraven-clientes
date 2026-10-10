@@ -89,9 +89,14 @@ export default function Catalog() {
               {seccion}
             </h2>
             {tamanos.map(([oz, lista]) => (
-              <div key={String(oz)} className="mt-4">
-                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-                  {etiquetaTamano(oz)} <span className="font-normal">· {lista.length}</span>
+              <div key={String(oz)} className="mt-5">
+                {/* Bien marcado para que no se confunda un tamaño con otro */}
+                <h3 className="flex items-center gap-2 mb-3">
+                  <span className="bg-petroleo text-white text-base font-extrabold rounded-lg px-3 py-1.5">
+                    {etiquetaTamano(oz)}
+                  </span>
+                  <span className="text-sm text-gray-500">{lista.length} producto(s)</span>
+                  <span className="flex-1 h-px bg-gray-300" />
                 </h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   {lista.map((p) => <ProductCard key={p.id} product={p} onAdd={addItem} />)}

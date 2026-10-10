@@ -17,7 +17,7 @@ import Profile from './screens/clienta/Profile'
 import Dashboard from './screens/admin/Dashboard'
 import OrdersBoard from './screens/admin/OrdersBoard'
 import Dispatch from './screens/admin/Dispatch'
-import Products from './screens/admin/Products'
+import Catalogo from './screens/admin/Catalogo'
 import Clients from './screens/admin/Clients'
 import Settings from './screens/admin/Settings'
 import Usuarios from './screens/admin/Usuarios'
@@ -28,7 +28,7 @@ const PANTALLAS = {
   '/admin/pedidos': OrdersBoard,
   '/admin/despacho': Dispatch,
   '/admin/clientas': Clients,
-  '/admin/productos': Products,
+  '/admin/productos': Catalogo,
   '/admin/configuracion': Settings,
   '/admin/usuarios': Usuarios,
   '/admin/roles': Roles,

@@ -3,10 +3,11 @@ import { Upload, Download, Plus, Pencil, Trash2, AlertTriangle, Check, X } from 
 import { supabase } from '../../lib/supabaseClient'
 import { formatMoney } from '../../utils/format'
 import { leerExcel, descargarExcel } from '../../utils/excel'
+import CampoFoto from '../../components/CampoFoto'
 import { codigoUnico, normalizar } from '../../utils/codigoProducto'
 import { agruparCatalogo, etiquetaTamano } from '../../utils/ordenProducto'
 
-const vacio = { codigo: '', nombre: '', descripcion: '', precio: '', seccion: '', disponible: true }
+const vacio = { codigo: '', nombre: '', descripcion: '', precio: '', seccion: '', disponible: true, foto_url: null }
 const SIN_SECCION = 'Sin sección'
 
 // Nombres de columna que se aceptan en el Excel (en cualquier orden).
@@ -42,7 +43,8 @@ export default function Products() {
 
   async function cargar() {
     const [{ data: p }, { data: c }] = await Promise.all([
-      supabase.from('products').select('*, categories(nombre)').order('nombre'),
+      // Solo los productos sueltos: los combos tienen su propia pestaña.
+      supabase.from('products').select('*, categories(nombre)').eq('tipo', 'simple').order('nombre'),
       supabase.from('categories').select('*').order('nombre'),
     ])
     setProducts(p || [])
@@ -62,6 +64,7 @@ export default function Products() {
       nombre: form.nombre.trim(),
       codigo: form.codigo.trim() || null,
       descripcion: form.descripcion?.trim() || null,
+      foto_url: form.foto_url || null,
       precio,
       disponible: form.disponible !== false,
       categoria_id: await idDeSeccion(form.seccion),
@@ -100,7 +103,7 @@ export default function Products() {
     setForm({
       codigo: p.codigo || '', nombre: p.nombre, descripcion: p.descripcion || '',
       precio: String(p.precio ?? ''), seccion: seccionDe(p) === SIN_SECCION ? '' : seccionDe(p),
-      disponible: p.disponible !== false,
+      disponible: p.disponible !== false, foto_url: p.foto_url || null,
     })
     setEditando(p.id)
   }
@@ -288,9 +291,11 @@ export default function Products() {
   })
 
   return (
-    <div className="p-4 md:p-8">
+    <div>
       <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-        <h1 className="text-2xl font-bold text-grafondo">Productos <span className="text-base font-normal text-gray-400">({products.length})</span></h1>
+        <p className="text-sm text-gray-500">
+          {products.length} producto(s) sueltos. Los Duo Pack y Duo Kit se arman en sus pestañas.
+        </p>
         <div className="flex flex-wrap gap-2">
           <button onClick={() => inputArchivo.current?.click()} className="flex items-center gap-2 bg-dorado text-petroleo text-sm font-bold rounded-xl px-4 py-2">
             <Upload size={16} /> Subir Excel
@@ -399,9 +404,10 @@ export default function Products() {
           <label className="text-sm">Precio (RD$)
             <input inputMode="decimal" value={form.precio} onChange={(e) => setForm({ ...form, precio: e.target.value })} className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2" />
           </label>
-          <label className="text-sm md:col-span-2">Descripción (opcional)
-            <input value={form.descripcion} onChange={(e) => setForm({ ...form, descripcion: e.target.value })} className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2" />
+          <label className="text-sm md:col-span-2">Descripción (la que lee el cliente)
+            <textarea rows={2} placeholder="Ej. Shampoo nutritivo de coco, para uso diario." value={form.descripcion} onChange={(e) => setForm({ ...form, descripcion: e.target.value })} className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2" />
           </label>
+          <CampoFoto valor={form.foto_url} alCambiar={(u) => setForm({ ...form, foto_url: u })} carpeta="productos" />
           <label className="flex items-center gap-2 text-sm md:col-span-3">
             <input type="checkbox" className="w-5 h-5 accent-[#123B4A]" checked={form.disponible} onChange={(e) => setForm({ ...form, disponible: e.target.checked })} />
             Disponible (si lo apagas, el cliente lo ve marcado como agotado y no lo puede pedir)
@@ -433,9 +439,13 @@ export default function Products() {
               <span className="text-xs text-gray-400">{items.length}</span>
             </div>
             {tamanos.map(([oz, lista]) => (
-            <div key={String(oz)} className="mt-3">
-            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 ml-1">
-              {etiquetaTamano(oz)} <span className="font-normal">· {lista.length}</span>
+            <div key={String(oz)} className="mt-4">
+            <h3 className="flex items-center gap-2 mb-2">
+              <span className="bg-petroleo text-white text-sm font-extrabold rounded-lg px-3 py-1">
+                {etiquetaTamano(oz)}
+              </span>
+              <span className="text-xs text-gray-500">{lista.length} producto(s)</span>
+              <span className="flex-1 h-px bg-gray-300" />
             </h3>
             <div className="bg-pastelsuave border border-gray-200 rounded-2xl divide-y divide-white/80">
               {lista.map((p) => (

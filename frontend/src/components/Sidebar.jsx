@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { LogOut, Menu, X } from 'lucide-react'
 import Logo from './Logo'
+import BotonVolver from './BotonVolver'
 import { useAuth } from '../context/AuthContext'
 import { MENU_ADMIN, puedeVer } from '../utils/menuAdmin'
 
@@ -55,7 +56,7 @@ export default function Sidebar() {
       <header className="md:hidden sticky top-0 z-40 bg-petroleo text-white flex items-center justify-between px-4 py-3">
         <button onClick={() => setAbierto(true)} aria-label="Abrir menú"><Menu size={24} /></button>
         <span className="font-semibold">Pedidos Keraven</span>
-        <span className="w-6" />
+        <BotonVolver className="text-white/80" />
       </header>
 
       {abierto && (
