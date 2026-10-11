@@ -5,14 +5,23 @@ import { formatMoney } from '../utils/format'
 // Ventana para que el cliente arme su caja: elige 1 o 2 sabores y el
 // programa reparte las unidades en partes iguales. Las mismas reglas las
 // vuelve a revisar el servidor al guardar el pedido.
-export default function ArmarCaja({ producto, alCerrar, alAgregar }) {
+export default function ArmarCaja({ producto, productos = [], alCerrar, alAgregar }) {
   const receta = producto.armado
   const maximo = Number(receta?.max_sabores || 1)
   const porGrupo = Number(receta?.unidades_por_grupo || 0)
   const grupos = receta?.grupos || []
-  const sabores = receta?.sabores || []
 
   const [elegidos, setElegidos] = useState([])
+
+  // Un sabor solo se puede elegir si TODAS sus piezas están disponibles:
+  // no se puede empacar lo que no hay.
+  const sabores = useMemo(() => {
+    const hay = new Map(productos.map((p) => [p.id, p.disponible !== false && Number(p.precio) > 0]))
+    return (receta?.sabores || []).map((s) => ({
+      ...s,
+      agotado: s.productos.some((id) => hay.get(id) === false),
+    }))
+  }, [receta, productos])
 
   // Con cuántos sabores se puede repartir en partes iguales.
   const permitidos = useMemo(
@@ -57,12 +66,13 @@ export default function ArmarCaja({ producto, alCerrar, alAgregar }) {
           <div className="grid grid-cols-2 gap-2">
             {sabores.map((s) => {
               const marcado = elegidos.includes(s.nombre)
-              const bloqueado = !marcado && !cabe
+              const bloqueado = s.agotado || (!marcado && !cabe)
               return (
                 <button
                   key={s.nombre}
                   onClick={() => alternar(s.nombre)}
                   disabled={bloqueado}
+                  title={s.agotado ? 'Este sabor está agotado' : undefined}
                   className={`flex items-center gap-2 rounded-xl border-2 px-3 py-3 text-sm text-left transition ${
                     marcado ? 'border-dorado bg-dorado/10 font-bold text-petroleo'
                       : bloqueado ? 'border-gray-100 text-gray-300'
@@ -72,7 +82,10 @@ export default function ArmarCaja({ producto, alCerrar, alAgregar }) {
                   <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${marcado ? 'border-dorado bg-dorado text-white' : 'border-gray-300'}`}>
                     {marcado && <Check size={13} />}
                   </span>
-                  {s.nombre}
+                  <span className="flex-1">
+                    {s.nombre}
+                    {s.agotado && <span className="block text-xs font-normal">agotado</span>}
+                  </span>
                 </button>
               )
             })}

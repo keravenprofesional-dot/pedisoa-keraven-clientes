@@ -116,6 +116,7 @@ export default function Catalog() {
         <ArmarCaja
           producto={armando}
           alCerrar={() => setArmando(null)}
+          productos={products}
           alAgregar={(sabores) => addItem(armando, sabores)}
         />
       )}

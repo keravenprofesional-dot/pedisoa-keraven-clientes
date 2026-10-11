@@ -277,7 +277,21 @@ export default function Combos({ tipo, titulo, ejemplo }) {
                   {Number(c.precio) ? formatMoney(c.precio) : 'sin precio'}
                 </span>
               </div>
-              <p className="text-xs text-gray-500 mt-0.5">{(c.product_items || []).length} producto(s) adentro</p>
+              {c.armado
+                ? <p className="text-xs text-gray-500 mt-0.5">
+                    Caja de {c.armado.unidades_por_grupo * c.armado.grupos.length} ·
+                    el cliente elige hasta {c.armado.max_sabores} de {c.armado.sabores.length} sabores
+                    {(() => {
+                      const hay = new Map(productos.map((p) => [p.id, p.disponible !== false && Number(p.precio) > 0]))
+                      const agotados = c.armado.sabores.filter((s) => s.productos.some((id) => hay.get(id) === false))
+                      return agotados.length
+                        ? <span className="block text-amber-700 font-semibold">
+                            {agotados.length} sabor(es) agotado(s): {agotados.map((s) => s.nombre).join(', ')}
+                          </span>
+                        : <span className="block text-green-700">todos los sabores disponibles</span>
+                    })()}
+                  </p>
+                : <p className="text-xs text-gray-500 mt-0.5">{(c.product_items || []).length} producto(s) adentro</p>}
               {c.descripcion && <p className="text-xs text-gray-500 line-clamp-2">{c.descripcion}</p>}
               <div className="flex flex-wrap gap-2 mt-2">
                 <button onClick={() => alternarDisponible(c)} className={`flex items-center gap-1 text-xs font-semibold rounded-lg px-2 py-1 border ${c.disponible ? 'bg-green-50 border-green-300 text-green-800' : 'bg-gray-100 border-gray-300 text-gray-500'}`}>
