@@ -10,9 +10,9 @@ import { Music, VolumeX } from 'lucide-react'
 //   3. El archivo se descarga, así que conviene que sea corto y liviano.
 //
 // Para que aparezca el botón, pon el archivo en:
-//   frontend/public/musica.mp3
+//   frontend/public/musica.wav
 // Si no está, el botón no se muestra y no pasa nada.
-const ARCHIVO = `${import.meta.env.BASE_URL}musica.mp3`
+const ARCHIVO = `${import.meta.env.BASE_URL}musica.wav`
 const RECUERDO = 'keraven-musica'
 
 export default function MusicaFondo() {
