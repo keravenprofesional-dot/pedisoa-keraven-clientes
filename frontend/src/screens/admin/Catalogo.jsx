@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Package, Layers, Gift, Boxes, Eye, EyeOff } from 'lucide-react'
+import { Package, Layers, Gift, Boxes, Shuffle, Eye, EyeOff } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { useAuth } from '../../context/AuthContext'
 import ListaProductos from './Products'
@@ -9,6 +9,7 @@ import Combos from './Combos'
 const PESTANAS = [
   { id: 'linea', icono: Layers, texto: 'Líneas' },
   { id: 'duo_pack', icono: Gift, texto: 'Duo Pack' },
+  { id: 'duo_pack_mixto', icono: Shuffle, texto: 'Duo Pack Mixto' },
   { id: 'duo_kit', icono: Boxes, texto: 'Duo Kit' },
   { id: 'productos', icono: Package, texto: 'Todos los productos' },
 ]
@@ -88,7 +89,10 @@ export default function Catalogo() {
         <Combos tipo="linea" titulo="Línea" ejemplo="Por ejemplo: la Línea de Coco con su shampoo, su tratamiento y su mascarilla." />
       )}
       {pestana === 'duo_pack' && (
-        <Combos tipo="duo_pack" titulo="Duo Pack" ejemplo="Por ejemplo: la caja de 16 shampoo de 16 oz." />
+        <Combos tipo="duo_pack" titulo="Duo Pack" ejemplo="Caja de un solo sabor. Por ejemplo: 16 shampoo de coco." />
+      )}
+      {pestana === 'duo_pack_mixto' && (
+        <Combos tipo="duo_pack_mixto" titulo="Duo Pack Mixto" ejemplo="Caja repartida en dos sabores. Por ejemplo: 8 de coco y 8 de zanahoria." />
       )}
       {pestana === 'duo_kit' && (
         <Combos tipo="duo_kit" titulo="Duo Kit" ejemplo="Por ejemplo: el juego completo de una línea en su empaque." />

@@ -14,6 +14,7 @@ const SIN_SECCION = 'Otros productos'
 const PESTANAS = [
   { tipo: 'linea', texto: 'Líneas' },
   { tipo: 'duo_pack', texto: 'Duo Pack' },
+  { tipo: 'duo_pack_mixto', texto: 'Duo Pack Mixto' },
   { tipo: 'duo_kit', texto: 'Duo Kit' },
   { tipo: 'simple', texto: 'Todos los productos' },
 ]
