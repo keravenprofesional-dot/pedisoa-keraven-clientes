@@ -6,6 +6,7 @@ import ProductCard from '../../components/ProductCard'
 import { useCart } from '../../context/CartContext'
 import { normalizar } from '../../utils/codigoProducto'
 import { agruparCatalogo, etiquetaTamano } from '../../utils/ordenProducto'
+import ArmarCaja from '../../components/ArmarCaja'
 
 const SIN_SECCION = 'Otros productos'
 
@@ -15,6 +16,7 @@ export default function Catalog() {
   const [categoryId, setCategoryId] = useState('all')
   const [query, setQuery] = useState('')
   const [loading, setLoading] = useState(true)
+  const [armando, setArmando] = useState(null) // caja que el cliente está armando
   const { addItem, items } = useCart()
   const navigate = useNavigate()
 
@@ -49,6 +51,9 @@ export default function Catalog() {
   }, [filtrados, categories])
 
   const totalItems = items.reduce((sum, i) => sum + i.cantidad, 0)
+
+  // Si el producto es una caja que se arma, primero se eligen los sabores.
+  const agregar = (p) => (p.armado ? setArmando(p) : addItem(p))
 
   return (
     <div className="p-4 pb-28 md:pb-6 max-w-4xl mx-auto">
@@ -99,12 +104,20 @@ export default function Catalog() {
                   <span className="flex-1 h-px bg-gray-300" />
                 </h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {lista.map((p) => <ProductCard key={p.id} product={p} onAdd={addItem} />)}
+                  {lista.map((p) => <ProductCard key={p.id} product={p} onAdd={agregar} />)}
                 </div>
               </div>
             ))}
           </section>
         ))
+      )}
+
+      {armando && (
+        <ArmarCaja
+          producto={armando}
+          alCerrar={() => setArmando(null)}
+          alAgregar={(sabores) => addItem(armando, sabores)}
+        />
       )}
 
       {totalItems > 0 && (

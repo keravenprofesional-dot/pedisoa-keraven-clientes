@@ -76,7 +76,17 @@ export default function Dispatch() {
                       checked={!!checked[o.id]?.[it.id]}
                       onChange={() => toggleItem(o.id, it.id)}
                     />
-                    {it.cantidad} unidad(es) — {it.products?.nombre}
+                    <span>
+                      {it.cantidad} unidad(es) — {it.products?.nombre}
+                      {/* Caja armada por el cliente: lo que de verdad hay que empacar */}
+                      {it.detalle?.length > 0 && (
+                        <span className="block ml-1 mt-0.5 text-xs text-petroleo font-semibold">
+                          {it.detalle.map((d, n) => (
+                            <span key={n} className="block">▸ {d.cantidad} {d.nombre}</span>
+                          ))}
+                        </span>
+                      )}
+                    </span>
                   </label>
                 ))}
 

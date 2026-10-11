@@ -24,25 +24,31 @@ export default function Cart() {
       <h1 className="text-xl font-bold text-grafondo mb-4">Carrito</h1>
 
       <div className="flex flex-col gap-3">
-        {items.map(({ product, cantidad }) => (
-          <div key={product.id} className="bg-white rounded-xl border border-gray-100 p-3 flex gap-3 items-center">
+        {items.map(({ clave, product, cantidad, sabores }) => (
+          <div key={clave} className="bg-white rounded-xl border border-gray-100 p-3 flex gap-3 items-center">
             <div className="w-16 h-16 bg-graclaro rounded-lg overflow-hidden flex-shrink-0">
               {product.foto_url && <img src={product.foto_url} className="w-full h-full object-cover" />}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-semibold text-sm text-grafondo truncate">{product.nombre}</p>
+              <p className="font-semibold text-sm text-grafondo">{product.nombre}</p>
+              {/* En una caja armada, los sabores que eligió */}
+              {sabores?.length > 0 && (
+                <p className="text-xs text-petroleo">
+                  {product.armado?.unidades_por_grupo / sabores.length} de cada uno · {sabores.join(' y ')}
+                </p>
+              )}
               <p className="text-petroleo font-bold text-sm">{formatMoney(product.precio)}</p>
             </div>
             <div className="flex items-center gap-2">
-              <button onClick={() => updateQty(product.id, cantidad - 1)} className="p-1.5 bg-graclaro rounded-full">
+              <button onClick={() => updateQty(clave, cantidad - 1)} className="p-1.5 bg-graclaro rounded-full">
                 <Minus size={14} />
               </button>
               <span className="w-6 text-center font-semibold">{cantidad}</span>
-              <button onClick={() => updateQty(product.id, cantidad + 1)} className="p-1.5 bg-graclaro rounded-full">
+              <button onClick={() => updateQty(clave, cantidad + 1)} className="p-1.5 bg-graclaro rounded-full">
                 <Plus size={14} />
               </button>
             </div>
-            <button onClick={() => removeItem(product.id)} className="text-red-400 p-1.5">
+            <button onClick={() => removeItem(clave)} className="text-red-400 p-1.5">
               <Trash2 size={16} />
             </button>
           </div>

@@ -47,7 +47,13 @@ export default function Checkout() {
       // El servidor recalcula precios, total y crédito con sus propios datos;
       // lo que se muestra en pantalla es solo una vista previa.
       const { data: order, error: orderErr } = await supabase.rpc('crear_pedido', {
-        items: items.map((i) => ({ product_id: i.product.id, cantidad: i.cantidad })),
+        items: items.map((i) => ({
+          product_id: i.product.id,
+          cantidad: i.cantidad,
+          // En una caja armada van los sabores que eligió; el servidor
+          // vuelve a revisarlos y calcula lo que de verdad lleva.
+          ...(i.sabores?.length ? { sabores: i.sabores } : {}),
+        })),
         delivery_method: deliveryMethod,
         delivery_stop_id: deliveryMethod === 'parada' ? stopId : null,
         address_id: deliveryMethod === 'envio' ? addressId : null,
@@ -216,8 +222,11 @@ export default function Checkout() {
             <p><strong>Entrega:</strong> {deliveryMethod}</p>
             <div className="border-t pt-2 mt-2">
               {items.map((i) => (
-                <div key={i.product.id} className="flex justify-between">
-                  <span>{i.cantidad}× {i.product.nombre}</span>
+                <div key={i.clave} className="flex justify-between">
+                  <span>
+                    {i.cantidad}× {i.product.nombre}
+                    {i.sabores?.length > 0 && <span className="block text-xs text-petroleo">{i.sabores.join(' y ')}</span>}
+                  </span>
                   <span>{formatMoney(i.product.precio * i.cantidad)}</span>
                 </div>
               ))}

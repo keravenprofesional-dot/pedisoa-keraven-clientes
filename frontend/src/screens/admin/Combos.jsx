@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Plus, Pencil, Trash2, X, Search, Check } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import CampoFoto from '../../components/CampoFoto'
+import ArmadoCaja from './ArmadoCaja'
 import { borrarFoto } from '../../utils/subirFoto'
 import { codigoUnico, normalizar } from '../../utils/codigoProducto'
 import { compararProductos } from '../../utils/ordenProducto'
@@ -18,6 +19,7 @@ export default function Combos({ tipo, titulo, ejemplo }) {
   const [secciones, setSecciones] = useState([])
   const [form, setForm] = useState(vacio)
   const [piezas, setPiezas] = useState([]) // [{ producto, cantidad }]
+  const [armado, setArmado] = useState(null)      // receta si el cliente elige los sabores
   const [editando, setEditando] = useState(null)
   const [codigoAMano, setCodigoAMano] = useState(false)
   const [busqueda, setBusqueda] = useState('')
@@ -42,13 +44,14 @@ export default function Combos({ tipo, titulo, ejemplo }) {
 
   function abrir(c) {
     setAviso(''); setBusqueda(''); setCodigoAMano(false)
-    if (c === 'nuevo') { setForm(vacio); setPiezas([]); setEditando('nuevo'); return }
+    if (c === 'nuevo') { setForm(vacio); setPiezas([]); setArmado(null); setEditando('nuevo'); return }
     setForm({
       nombre: c.nombre, codigo: c.codigo || '', descripcion: c.descripcion || '',
       precio: String(c.precio ?? ''),
       foto_url: c.foto_url, disponible: c.disponible !== false,
     })
     setPiezas((c.product_items || []).map((i) => ({ producto: porId.get(i.componente_id) || { id: i.componente_id, nombre: '(producto borrado)', precio: 0 }, cantidad: i.cantidad })))
+    setArmado(c.armado || null)
     setEditando(c.id)
   }
 
@@ -75,7 +78,14 @@ export default function Combos({ tipo, titulo, ejemplo }) {
   async function guardar(e) {
     e.preventDefault()
     if (!form.nombre.trim()) return setAviso('Ponle nombre')
-    if (piezas.length < 2) return setAviso('Un combo lleva por lo menos 2 productos adentro')
+    if (armado) {
+      if (!armado.sabores?.length) return setAviso('La caja necesita por lo menos un sabor')
+      if (armado.sabores.some((s) => !s.nombre.trim() || s.productos.some((p) => !p))) {
+        return setAviso('Hay un sabor sin nombre o sin producto en algún grupo')
+      }
+    } else if (piezas.length < 2) {
+      return setAviso('Un combo lleva por lo menos 2 productos adentro')
+    }
     setGuardando(true); setAviso('')
     try {
       const datos = {
@@ -89,6 +99,10 @@ export default function Combos({ tipo, titulo, ejemplo }) {
         // Los combos no van en las secciones de productos sueltos
         // (Shampoo, Mascarilla…): tienen la suya propia.
         categoria_id: await idDeSeccion(titulo),
+        // Si el cliente elige los sabores, va la receta; si no, va vacío.
+        armado: armado
+          ? { ...armado, sabores: armado.sabores.map((s) => ({ nombre: s.nombre.trim(), productos: s.productos })) }
+          : null,
       }
       let id = editando
       if (editando === 'nuevo') {
@@ -100,11 +114,14 @@ export default function Combos({ tipo, titulo, ejemplo }) {
         if (error) throw new Error(error.message)
         await supabase.from('product_items').delete().eq('product_id', id)
       }
-      const { error: e2 } = await supabase.from('product_items').insert(
-        piezas.map((x) => ({ product_id: id, componente_id: x.producto.id, cantidad: x.cantidad }))
-      )
-      if (e2) throw new Error(e2.message)
-      setEditando(null); setPiezas([]); setForm(vacio)
+      // Una caja que se arma no lleva lista fija de piezas: depende del sabor.
+      if (!armado && piezas.length) {
+        const { error: e2 } = await supabase.from('product_items').insert(
+          piezas.map((x) => ({ product_id: id, componente_id: x.producto.id, cantidad: x.cantidad }))
+        )
+        if (e2) throw new Error(e2.message)
+      }
+      setEditando(null); setPiezas([]); setArmado(null); setForm(vacio)
       cargar()
     } catch (err) {
       setAviso('No se pudo guardar: ' + err.message)
@@ -180,6 +197,27 @@ export default function Combos({ tipo, titulo, ejemplo }) {
             </label>
           </div>
 
+          {/* Dos maneras de armar el combo */}
+          <div className="mt-4 border-t border-gray-100 pt-4">
+            <label className="flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="w-5 h-5 accent-[#123B4A] mt-0.5"
+                checked={!!armado}
+                onChange={(e) => setArmado(e.target.checked ? { unidades_por_grupo: 8, max_sabores: 2, grupos: ['Shampoo', 'Mascarilla'], sabores: [] } : null)}
+              />
+              <span>
+                <strong>El cliente elige los sabores</strong>
+                <span className="block text-xs text-gray-500">
+                  Para cajas como la de 16: 8 shampoo + 8 mascarilla, y el cliente escoge 1 o 2 sabores.
+                  Si lo dejas apagado, el combo lleva siempre los mismos productos.
+                </span>
+              </span>
+            </label>
+            {armado && <ArmadoCaja valor={armado} alCambiar={setArmado} productos={productos} />}
+          </div>
+
+          {!armado && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 border-t border-gray-100 pt-4">
             <div>
               <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Qué lleva adentro ({piezas.length})</h4>
@@ -212,6 +250,7 @@ export default function Combos({ tipo, titulo, ejemplo }) {
               </div>
             </div>
           </div>
+          )}
 
           <div className="flex gap-2 mt-4">
             <button disabled={guardando} className="bg-petroleo text-white rounded-lg px-4 py-2 font-semibold disabled:opacity-60">

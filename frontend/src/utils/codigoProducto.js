@@ -51,6 +51,27 @@ export function generarCodigo(nombre) {
   return [palabras[0]?.slice(0, 2), palabras[1]?.slice(0, 3)].filter(Boolean).join('-') || 'PR'
 }
 
+// Al revés: del trocito del código al nombre bonito del sabor.
+// COC → "Coco",  JEN → "Jengibre y Romero"
+const NOMBRE_DE_SABOR = (() => {
+  const m = {}
+  // Se recorre al revés para que gane el nombre más completo de cada código.
+  for (const [palabra, codigo] of [...SABORES].reverse()) {
+    m[codigo] = palabra.toLowerCase().replace(/(^|\s)([a-zñáéíóú])/g, (s) => s.toUpperCase()).replace(/\bY\b/g, 'y')
+  }
+  return m
+})()
+export function nombreDeSabor(codigo) {
+  return NOMBRE_DE_SABOR[String(codigo || '').toUpperCase()] || codigo
+}
+
+// Parte un código "SH-COC-32" en { tipo:'SH', sabor:'COC', tamano:'32' }.
+export function partirCodigo(codigo) {
+  const p = String(codigo || '').toUpperCase().split('-')
+  if (p.length < 2) return null
+  return { tipo: p[0], sabor: p[1], tamano: p[2] || '' }
+}
+
 // Igual que generarCodigo pero garantizando que no se repita.
 // `usados` es un Set de códigos ya ocupados (en MAYÚSCULAS).
 export function codigoUnico(nombre, usados) {
