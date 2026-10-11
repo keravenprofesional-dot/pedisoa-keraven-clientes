@@ -10,18 +10,20 @@ const items = [
 
 export default function BottomNav() {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around py-2 md:hidden z-40">
+    <nav className="fixed bottom-0 left-0 right-0 bg-negro flex justify-around pt-1 pb-2 md:hidden z-40 shadow-[0_-6px_20px_-12px_rgba(0,0,0,.6)]">
+      <div className="absolute top-0 left-0 right-0 h-[2px] borde-oro" />
       {items.map(({ to, icon: Icon, label }) => (
         <NavLink
           key={to}
           to={to}
+          end={to === '/'}
           className={({ isActive }) =>
-            `flex flex-col items-center gap-1 px-3 py-1 text-xs ${
-              isActive ? 'text-petroleo font-semibold' : 'text-gray-400'
+            `flex flex-col items-center gap-0.5 px-3 pt-2 pb-1 text-xs transition ${
+              isActive ? 'text-oro font-semibold' : 'text-crema/45'
             }`
           }
         >
-          <Icon size={22} />
+          <Icon size={21} />
           {label}
         </NavLink>
       ))}

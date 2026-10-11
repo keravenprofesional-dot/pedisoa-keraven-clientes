@@ -60,8 +60,8 @@ export default function Entrada({ inicio = 'clienta' }) {
   )
 
   return (
-    <div className={`min-h-screen flex flex-col items-center justify-center p-6 ${esPersonal ? 'bg-petroleo' : 'bg-graclaro'}`}>
-      <div className={`mb-8 ${esPersonal ? 'bg-white rounded-2xl px-6 py-4' : ''}`}><Logo size="lg" /></div>
+    <div className={`min-h-screen flex flex-col items-center justify-center p-6 ${esPersonal ? 'bg-petroleo' : 'fondo-keraven'}`}>
+      <div className={`mb-8 rounded-2xl px-6 py-4 ${esPersonal ? 'bg-white' : 'bg-negro'}`}><Logo size="lg" /></div>
 
       <div className="w-full max-w-sm bg-white rounded-2xl shadow-sm overflow-hidden">
         <div className="flex">

@@ -4,13 +4,13 @@ import { formatMoney } from '../utils/format'
 export default function ProductCard({ product, onAdd }) {
   const agotado = !product.disponible
   return (
-    <div className={`bg-white rounded-2xl shadow-sm border overflow-hidden flex flex-col ${agotado ? 'border-gray-200' : 'border-gray-100'}`}>
-      <div className="relative aspect-square bg-graclaro flex items-center justify-center overflow-hidden">
+    <div className={`rounded-2xl overflow-hidden flex flex-col ${agotado ? 'bg-white border border-gray-200' : 'tarjeta-keraven'}`}>
+      <div className="relative aspect-square bg-cremaoscura flex items-center justify-center overflow-hidden">
         {product.foto_url
           ? <img src={product.foto_url} alt={product.nombre} className={`w-full h-full object-cover ${agotado ? 'grayscale opacity-50' : ''}`} />
           : <span className="text-gray-300 text-sm">Sin foto</span>}
         {agotado && (
-          <span className="absolute inset-x-0 top-1/2 -translate-y-1/2 bg-grafondo/80 text-white text-xs font-bold text-center py-1.5 tracking-wide">
+          <span className="absolute inset-x-0 top-1/2 -translate-y-1/2 bg-negro/85 text-oro text-xs font-bold text-center py-1.5 tracking-widest">
             AGOTADO
           </span>
         )}
@@ -19,11 +19,11 @@ export default function ProductCard({ product, onAdd }) {
         <h3 className={`font-semibold text-sm leading-tight ${agotado ? 'text-gray-400' : 'text-grafondo'}`}>{product.nombre}</h3>
         {product.descripcion && <p className="text-xs text-gray-500 line-clamp-2">{product.descripcion}</p>}
         <div className="mt-auto flex items-center justify-between pt-2">
-          <span className={`font-bold ${agotado ? 'text-gray-400' : 'text-petroleo'}`}>{formatMoney(product.precio)}</span>
+          <span className={`font-bold ${agotado ? 'text-gray-400' : 'text-negro'}`}>{formatMoney(product.precio)}</span>
           <button
             onClick={() => onAdd(product)}
             disabled={agotado}
-            className="bg-petroleo disabled:bg-gray-300 text-white rounded-full p-2 active:scale-95 transition"
+            className="bg-negro disabled:bg-gray-300 text-oro disabled:text-white rounded-full p-2 active:scale-95 transition"
             aria-label={agotado ? 'Agotado' : 'Agregar al carrito'}
           >
             <Plus size={16} />

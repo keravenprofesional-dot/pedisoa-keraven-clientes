@@ -274,7 +274,7 @@ export default function Clients() {
                   <td className="p-3 font-bold text-petroleo whitespace-nowrap">{c.client_number}</td>
                   <td className="p-3">
                     {c.full_name}
-                    {!activa && <span className="text-xs text-red-500"> · Desactivada</span>}
+                    {!activa && <span className="text-xs text-red-500"> · Sin acceso</span>}
                     {c.correo && <div className="text-xs text-gray-400">{c.correo}</div>}
                   </td>
                   <td className="p-3 whitespace-nowrap">{c.telefono_login}</td>

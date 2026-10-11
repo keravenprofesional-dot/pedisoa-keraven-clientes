@@ -6,3 +6,32 @@ body {
   font-family: 'Inter', sans-serif;
   color: #263238;
 }
+
+@layer components {
+  /* Fondo de la tienda: crema cálida con un brillo dorado arriba, al
+     estilo del logo de Keraven (dorado sobre negro). */
+  .fondo-keraven {
+    background-color: #FBF6EA;
+    background-image:
+      radial-gradient(1100px 420px at 50% -220px, rgba(212, 164, 49, 0.22), transparent 70%),
+      linear-gradient(180deg, #FDFAF3 0%, #FBF6EA 38%, #F3EADA 100%);
+    background-attachment: fixed;
+  }
+
+  /* Filito dorado como el del logo, para los bordes de arriba. */
+  .borde-oro {
+    background-image: linear-gradient(90deg, #8C6A14, #EBCB76 45%, #D4A431 60%, #8C6A14);
+  }
+
+  /* Tarjeta de la tienda: blanca, suave y con el dorado solo al tocarla. */
+  .tarjeta-keraven {
+    background-color: #fff;
+    border: 1px solid rgba(212, 164, 49, 0.22);
+    box-shadow: 0 1px 2px rgba(13, 13, 13, 0.04), 0 8px 24px -16px rgba(13, 13, 13, 0.25);
+    transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+  }
+  .tarjeta-keraven:hover {
+    border-color: rgba(212, 164, 49, 0.65);
+    box-shadow: 0 2px 4px rgba(13, 13, 13, 0.05), 0 14px 30px -18px rgba(13, 13, 13, 0.35);
+  }
+}

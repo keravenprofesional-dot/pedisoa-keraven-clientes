@@ -2,9 +2,10 @@ import { Link } from 'react-router-dom'
 import { ShoppingBag, Package, Receipt, CreditCard, User, Phone } from 'lucide-react'
 import Logo from '../../components/Logo'
 import { useAuth } from '../../context/AuthContext'
+import { formatMoney } from '../../utils/format'
 
-const options = [
-  { to: '/catalogo', icon: ShoppingBag, label: 'Realizar pedido' },
+const opciones = [
+  { to: '/catalogo', icon: ShoppingBag, label: 'Realizar pedido', destacado: true },
   { to: '/mis-pedidos', icon: Package, label: 'Mis pedidos' },
   { to: '/mis-pedidos', icon: Receipt, label: 'Mis recibos' },
   { to: '/perfil', icon: CreditCard, label: 'Mis pagos' },
@@ -14,27 +15,56 @@ const options = [
 
 export default function Home() {
   const { client } = useAuth()
-  return (
-    <div className="p-6 pb-24 md:pb-6 max-w-2xl mx-auto">
-      <div className="flex justify-center mb-6"><Logo /></div>
-      <h1 className="text-xl font-bold text-grafondo mb-1">
-        Bienvenida{client?.full_name ? `, ${client.full_name.split(' ')[0]}` : ''}
-      </h1>
-      <p className="text-gray-500 mb-6">¿Qué deseas hacer hoy?</p>
+  const debe = Number(client?.balance_pendiente || 0)
 
-      <div className="grid grid-cols-2 gap-4">
-        {options.map(({ to, icon: Icon, label }, idx) => (
-          <Link
-            key={idx}
-            to={to}
-            className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex flex-col items-center gap-3 hover:border-dorado transition"
-          >
-            <div className="bg-petroleo/10 text-petroleo p-3 rounded-full">
-              <Icon size={24} />
-            </div>
-            <span className="text-sm font-semibold text-grafondo text-center">{label}</span>
-          </Link>
-        ))}
+  return (
+    <div className="pb-28 md:pb-10">
+      {/* Portada negra con el logo dorado, como la marca */}
+      <div className="bg-negro text-crema px-6 pt-8 pb-14 text-center relative">
+        <div className="inline-block bg-negro rounded-2xl p-1 mb-3"><Logo size="lg" /></div>
+        <p className="text-[11px] tracking-[0.35em] text-oro/80 uppercase">Keraven Profesional</p>
+        <h1 className="text-2xl font-bold mt-3">
+          Hola{client?.full_name ? `, ${client.full_name.split(' ')[0]}` : ''}
+        </h1>
+        <p className="text-crema/60 text-sm mt-1">¿Qué deseas hacer hoy?</p>
+        <div className="absolute bottom-0 left-0 right-0 h-[3px] borde-oro" />
+      </div>
+
+      <div className="px-5 -mt-8 max-w-2xl mx-auto">
+        {/* Su número de cliente y lo que debe, a la vista */}
+        <div className="tarjeta-keraven rounded-2xl px-4 py-3 mb-5 flex items-center justify-between gap-3">
+          <div>
+            <p className="text-[11px] uppercase tracking-wider text-gray-400">Número de cliente</p>
+            <p className="font-bold text-negro">{client?.client_number || '—'}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-[11px] uppercase tracking-wider text-gray-400">Balance</p>
+            <p className={`font-bold ${debe > 0 ? 'text-red-600' : 'text-green-700'}`}>
+              {debe > 0 ? formatMoney(debe) : 'Al día'}
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          {opciones.map(({ to, icon: Icono, label, destacado }, i) => (
+            <Link
+              key={i}
+              to={to}
+              className={`rounded-2xl p-5 flex flex-col items-center gap-3 active:scale-[0.98] transition ${
+                destacado
+                  ? 'col-span-2 bg-negro text-crema border border-oro/40 shadow-lg'
+                  : 'tarjeta-keraven'
+              }`}
+            >
+              <div className={`p-3 rounded-full ${destacado ? 'bg-oro text-negro' : 'bg-oro/12 text-oro'}`}>
+                <Icono size={24} />
+              </div>
+              <span className={`text-sm font-semibold text-center ${destacado ? 'text-crema' : 'text-grafondo'}`}>
+                {label}
+              </span>
+            </Link>
+          ))}
+        </div>
       </div>
     </div>
   )

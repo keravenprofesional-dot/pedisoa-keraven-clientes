@@ -130,7 +130,7 @@ export default function Usuarios() {
                 {u.es_supremo
                   ? <span className="bg-dorado/20 text-petroleo font-semibold rounded-full px-2 py-0.5">Supremo usuario</span>
                   : <span className="bg-graclaro text-petroleo rounded-full px-2 py-0.5">{nombreRol(u.rol_id)}</span>}
-                {!u.active && <span className="ml-2 text-red-500 font-semibold">Desactivado</span>}
+                {!u.active && <span className="ml-2 text-red-500 font-semibold">Sin acceso</span>}
               </p>
             </div>
             <button onClick={() => abrir(u)} className="flex items-center gap-1 text-sm text-petroleo border border-gray-200 rounded-lg px-3 py-1.5">

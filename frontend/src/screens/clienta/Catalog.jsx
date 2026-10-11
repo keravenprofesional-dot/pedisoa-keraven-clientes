@@ -57,7 +57,7 @@ export default function Catalog() {
 
   return (
     <div className="p-4 pb-28 md:pb-6 max-w-4xl mx-auto">
-      <h1 className="text-xl font-bold text-grafondo mb-4">Catálogo</h1>
+      <h1 className="text-xl font-bold text-negro mb-4">Catálogo</h1>
 
       <div className="relative mb-4">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
@@ -75,7 +75,7 @@ export default function Catalog() {
             key={c.id}
             onClick={() => setCategoryId(c.id)}
             className={`px-4 py-2 rounded-full text-sm whitespace-nowrap ${
-              categoryId === c.id ? 'bg-petroleo text-white' : 'bg-white border border-gray-200 text-gray-500'
+              categoryId === c.id ? 'bg-negro text-oro font-semibold' : 'bg-white border border-oro/25 text-gray-500'
             }`}
           >
             {c.nombre}
@@ -90,14 +90,14 @@ export default function Catalog() {
       ) : (
         secciones.map(([seccion, tamanos]) => (
           <section key={seccion} className="mb-8">
-            <h2 className="font-bold text-petroleo uppercase tracking-wide text-sm mb-1 pb-1 border-b-2 border-dorado/40">
+            <h2 className="font-bold text-negro uppercase tracking-wide text-sm mb-1 pb-1 border-b-2 border-oro/50">
               {seccion}
             </h2>
             {tamanos.map(([oz, lista]) => (
               <div key={String(oz)} className="mt-5">
                 {/* Bien marcado para que no se confunda un tamaño con otro */}
                 <h3 className="flex items-center gap-2 mb-3">
-                  <span className="bg-petroleo text-white text-base font-extrabold rounded-lg px-3 py-1.5">
+                  <span className="bg-negro text-oro text-base font-extrabold rounded-lg px-3 py-1.5">
                     {etiquetaTamano(oz)}
                   </span>
                   <span className="text-sm text-gray-500">{lista.length} producto(s)</span>
@@ -124,7 +124,7 @@ export default function Catalog() {
       {totalItems > 0 && (
         <button
           onClick={() => navigate('/carrito')}
-          className="fixed bottom-20 md:bottom-6 right-4 md:right-8 bg-dorado text-petroleo rounded-full shadow-lg px-5 py-3 flex items-center gap-2 font-bold z-40"
+          className="fixed bottom-24 md:bottom-6 right-4 md:right-8 bg-oro text-negro rounded-full shadow-xl px-5 py-3 flex items-center gap-2 font-bold z-40"
         >
           <ShoppingCart size={20} /> {totalItems}
         </button>
