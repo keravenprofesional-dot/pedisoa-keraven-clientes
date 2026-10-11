@@ -12,6 +12,8 @@ import Catalog from './screens/clienta/Catalog'
 import Cart from './screens/clienta/Cart'
 import Checkout from './screens/clienta/Checkout'
 import MyOrders from './screens/clienta/MyOrders'
+import MyPayments from './screens/clienta/MyPayments'
+import MyReceipts from './screens/clienta/MyReceipts'
 import OrderDetail from './screens/clienta/OrderDetail'
 import Profile from './screens/clienta/Profile'
 
@@ -63,6 +65,8 @@ export default function App() {
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/mis-pedidos" element={<MyOrders />} />
           <Route path="/mis-pedidos/:id" element={<OrderDetail />} />
+          <Route path="/mis-pagos" element={<MyPayments />} />
+          <Route path="/mis-recibos" element={<MyReceipts />} />
           <Route path="/perfil" element={<Profile />} />
         </Route>
 

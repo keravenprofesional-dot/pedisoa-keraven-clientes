@@ -4,14 +4,17 @@ import { ShoppingBag, Package, Receipt, CreditCard, User, Phone, Instagram } fro
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabaseClient'
 import { formatMoney } from '../../utils/format'
+import logo from '../../assets/logo.jpg'
 
+// Cada tarjeta lleva a un sitio distinto. La última no es una pantalla:
+// marca el teléfono de Keraven.
 const opciones = [
   { to: '/catalogo', icon: ShoppingBag, label: 'Realizar pedido', sub: 'Catálogo completo', destacado: true },
   { to: '/mis-pedidos', icon: Package, label: 'Mis pedidos', sub: 'Historial' },
-  { to: '/mis-pedidos', icon: Receipt, label: 'Mis recibos', sub: 'Comprobantes' },
-  { to: '/perfil', icon: CreditCard, label: 'Mis pagos', sub: 'Balance y abonos' },
+  { to: '/mis-recibos', icon: Receipt, label: 'Mis recibos', sub: 'Comprobantes' },
+  { to: '/mis-pagos', icon: CreditCard, label: 'Mis pagos', sub: 'Balance y abonos' },
   { to: '/perfil', icon: User, label: 'Mi perfil', sub: 'Mis datos' },
-  { to: '/perfil', icon: Phone, label: 'Contactar', sub: 'Hablar con Keraven' },
+  { icon: Phone, label: 'Contactar', sub: 'Hablar con Keraven', llamar: true },
 ]
 
 export default function Home() {
@@ -19,10 +22,14 @@ export default function Home() {
   const debe = Number(client?.balance_pendiente || 0)
   const nombre = client?.full_name?.split(' ')[0]
   const [instagram, setInstagram] = useState('')
+  const [telefono, setTelefono] = useState('')
 
   useEffect(() => {
-    supabase.from('company_settings').select('instagram').maybeSingle()
-      .then(({ data }) => setInstagram(data?.instagram || ''))
+    supabase.from('company_settings').select('instagram, whatsapp, telefono').maybeSingle()
+      .then(({ data }) => {
+        setInstagram(data?.instagram || '')
+        setTelefono(String(data?.whatsapp || data?.telefono || '').replace(/[^\d+]/g, ''))
+      })
   }, [])
 
   const hora = new Date().getHours()
@@ -32,7 +39,12 @@ export default function Home() {
     <div className="mx-auto max-w-2xl px-5 pb-28 md:pb-10">
       {/* Portada de revista: el logo ya está arriba en la barra, así que aquí
           se abre con tipografía, no repitiéndolo. */}
-      <header className="pt-9 pb-7">
+      <header className="pt-7 pb-7">
+        {/* El logo vive aquí, grande y visible. La placa negra va ceñida al
+            logo, no de lado a lado: una franja negra ancha no la quiere nadie. */}
+        <div className="mb-6 inline-block rounded-2xl bg-negro px-5 py-3 ring-1 ring-oro/35">
+          <img src={logo} alt="Keraven Profesional" className="h-20 w-auto object-contain md:h-24" />
+        </div>
         <p className="font-sans text-[10px] font-medium uppercase tracking-[0.5em] text-oroprof">
           Keraven&nbsp;Profesional
         </p>
@@ -54,10 +66,14 @@ export default function Home() {
       </header>
 
       <div className="grid grid-cols-2 gap-3">
-        {opciones.map(({ to, icon: Icono, label, sub, destacado }, i) => (
-          <Link
+        {opciones.map(({ to, icon: Icono, label, sub, destacado, llamar }, i) => {
+          // La de contactar marca el teléfono; las demás son pantallas.
+          const Caja = llamar ? 'a' : Link
+          const props = llamar ? { href: telefono ? `tel:${telefono}` : undefined } : { to }
+          return (
+          <Caja
             key={i}
-            to={to}
+            {...props}
             className={`destello group relative flex flex-col justify-between rounded-[20px] bg-white/85 px-4 py-4 ring-1 ring-oro/25 transition hover:ring-oro/60 active:scale-[0.99] ${
               destacado
                 ? 'col-span-2 min-h-[132px] bg-gradient-to-br from-white via-crema to-cremaoscura px-6 py-6 ring-oro/55'
@@ -83,8 +99,9 @@ export default function Home() {
                 <ShoppingBag size={17} strokeWidth={1.5} />
               </span>
             )}
-          </Link>
-        ))}
+          </Caja>
+          )
+        })}
       </div>
 
       {instagram && (
