@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Plus, Pencil, Trash2, X, Search, ChevronDown, ChevronUp } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, Search, ChevronDown, ChevronUp, Check } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import CampoFoto from '../../components/CampoFoto'
 import { borrarFoto } from '../../utils/subirFoto'
@@ -8,16 +8,18 @@ import { compararProductos, etiquetaTamano, tamanoOz } from '../../utils/ordenPr
 import { formatMoney } from '../../utils/format'
 
 // Las líneas atraviesan las secciones: la Línea de Coco tiene su shampoo,
-// su tratamiento y su mascarilla. Aquí se arman y se ve qué lleva cada una.
+// su tratamiento y su mascarilla. Al crearla ya se eligen sus productos.
 const vacia = { nombre: '', descripcion: '', foto_url: null }
 
 export default function Lineas() {
   const [lineas, setLineas] = useState([])
   const [productos, setProductos] = useState([])
   const [form, setForm] = useState(vacia)
-  const [editando, setEditando] = useState(null) // null | 'nueva' | id
+  const [elegidos, setElegidos] = useState(new Set()) // ids de productos de la línea
+  const [editando, setEditando] = useState(null)      // null | 'nueva' | id
   const [abierta, setAbierta] = useState(null)
   const [busqueda, setBusqueda] = useState('')
+  const [guardando, setGuardando] = useState(false)
   const [aviso, setAviso] = useState('')
 
   useEffect(() => { cargar() }, [])
@@ -25,35 +27,64 @@ export default function Lineas() {
   async function cargar() {
     const [{ data: l }, { data: p }] = await Promise.all([
       supabase.from('lineas').select('*').order('orden').order('nombre'),
-      supabase.from('products').select('id, nombre, codigo, precio, linea_id, tipo').order('nombre'),
+      supabase.from('products').select('id, nombre, codigo, precio, linea_id, tipo').eq('tipo', 'simple').order('nombre'),
     ])
     setLineas(l || [])
     setProductos(p || [])
   }
 
   const deLaLinea = (id) => productos.filter((p) => p.linea_id === id).sort(compararProductos)
+  const nombreLinea = (id) => lineas.find((l) => l.id === id)?.nombre
+
+  function abrirForm(l) {
+    setAviso(''); setBusqueda('')
+    if (l === 'nueva') { setForm(vacia); setElegidos(new Set()); setEditando('nueva'); return }
+    setForm({ nombre: l.nombre, descripcion: l.descripcion || '', foto_url: l.foto_url })
+    setElegidos(new Set(deLaLinea(l.id).map((p) => p.id)))
+    setEditando(l.id)
+  }
+
+  const alternar = (id) => setElegidos((prev) => {
+    const s = new Set(prev)
+    s.has(id) ? s.delete(id) : s.add(id)
+    return s
+  })
 
   async function guardar(e) {
     e.preventDefault()
-    setAviso('')
-    const datos = {
-      nombre: form.nombre.trim(),
-      descripcion: form.descripcion?.trim() || null,
-      foto_url: form.foto_url || null,
-    }
-    if (!datos.nombre) return setAviso('Ponle nombre a la línea')
-    const { error } = editando === 'nueva'
-      ? await supabase.from('lineas').insert(datos)
-      : await supabase.from('lineas').update(datos).eq('id', editando)
-    if (error) return setAviso(error.code === '23505' ? 'Ya existe una línea con ese nombre' : 'No se pudo guardar')
-    setEditando(null); setForm(vacia); cargar()
-  }
+    const nombre = form.nombre.trim()
+    if (!nombre) return setAviso('Ponle nombre a la línea')
+    setGuardando(true); setAviso('')
+    try {
+      const datos = { nombre, descripcion: form.descripcion?.trim() || null, foto_url: form.foto_url || null }
+      let id = editando
+      if (editando === 'nueva') {
+        const { data, error } = await supabase.from('lineas').insert(datos).select().single()
+        if (error) throw new Error(error.code === '23505' ? 'Ya existe una línea con ese nombre' : error.message)
+        id = data.id
+      } else {
+        const { error } = await supabase.from('lineas').update(datos).eq('id', id)
+        if (error) throw new Error(error.code === '23505' ? 'Ya existe una línea con ese nombre' : error.message)
+      }
 
-  function abrirForm(l) {
-    setAviso('')
-    if (l === 'nueva') { setForm(vacia); setEditando('nueva'); return }
-    setForm({ nombre: l.nombre, descripcion: l.descripcion || '', foto_url: l.foto_url })
-    setEditando(l.id)
+      // Los que marcaste entran a la línea; los que estaban y desmarcaste salen.
+      const entran = [...elegidos]
+      const salen = productos.filter((p) => p.linea_id === id && !elegidos.has(p.id)).map((p) => p.id)
+      if (entran.length) {
+        const { error } = await supabase.from('products').update({ linea_id: id }).in('id', entran)
+        if (error) throw new Error(error.message)
+      }
+      if (salen.length) {
+        const { error } = await supabase.from('products').update({ linea_id: null }).in('id', salen)
+        if (error) throw new Error(error.message)
+      }
+      setEditando(null); setForm(vacia); setElegidos(new Set())
+      cargar()
+    } catch (err) {
+      setAviso('No se pudo guardar: ' + err.message)
+    } finally {
+      setGuardando(false)
+    }
   }
 
   async function borrar(l) {
@@ -65,23 +96,15 @@ export default function Lineas() {
     cargar()
   }
 
-  async function poner(producto, lineaId) {
-    setProductos((prev) => prev.map((p) => (p.id === producto.id ? { ...p, linea_id: lineaId } : p)))
-    const { error } = await supabase.from('products').update({ linea_id: lineaId }).eq('id', producto.id)
-    if (error) { setAviso('No se pudo mover el producto'); cargar() }
-  }
-
-  // Para agregar: los que todavía no tienen línea o están en otra.
-  const candidatos = useMemo(() => {
+  // Lista para elegir: todos los productos sueltos, con buscador.
+  const lista = useMemo(() => {
     const q = normalizar(busqueda)
     return productos
-      .filter((p) => p.tipo === 'simple' && p.linea_id !== abierta)
       .filter((p) => !q || normalizar(p.nombre).includes(q) || (p.codigo || '').toUpperCase().includes(q))
       .sort(compararProductos)
-      .slice(0, 40)
-  }, [productos, abierta, busqueda])
+  }, [productos, busqueda])
 
-  const sinLinea = productos.filter((p) => p.tipo === 'simple' && !p.linea_id).length
+  const sinLinea = productos.filter((p) => !p.linea_id).length
   const input = 'mt-1 w-full border border-gray-200 rounded-lg px-3 py-2'
 
   return (
@@ -98,17 +121,57 @@ export default function Lineas() {
       {aviso && <p className="bg-amber-50 border border-amber-200 text-amber-900 text-sm rounded-xl p-3 mb-3">{aviso}</p>}
 
       {editando && (
-        <form onSubmit={guardar} className="bg-white border border-gray-100 rounded-2xl p-4 mb-5 grid grid-cols-1 md:grid-cols-2 gap-3">
-          <h3 className="md:col-span-2 font-semibold">{editando === 'nueva' ? 'Nueva línea' : 'Editar línea'}</h3>
-          <label className="text-sm">Nombre de la línea
-            <input required placeholder="Ej. Línea de Coco" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} className={input} />
-          </label>
-          <CampoFoto valor={form.foto_url} alCambiar={(u) => setForm({ ...form, foto_url: u })} carpeta="lineas" etiqueta="Foto de la línea empacada" />
-          <label className="text-sm md:col-span-2">Descripción (lo que verá el cliente)
-            <textarea rows={2} placeholder="Ej. Hidratación profunda para cabello reseco." value={form.descripcion} onChange={(e) => setForm({ ...form, descripcion: e.target.value })} className={input} />
-          </label>
-          <div className="md:col-span-2 flex gap-2">
-            <button className="bg-petroleo text-white rounded-lg px-4 py-2 font-semibold">Guardar</button>
+        <form onSubmit={guardar} className="bg-white border-2 border-dorado rounded-2xl p-4 mb-5">
+          <h3 className="font-bold text-petroleo mb-3">{editando === 'nueva' ? 'Nueva línea' : 'Editar línea'}</h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <label className="text-sm">Nombre de la línea
+              <input required autoFocus placeholder="Ej. Línea de Coco" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} className={input} />
+            </label>
+            <CampoFoto valor={form.foto_url} alCambiar={(u) => setForm({ ...form, foto_url: u })} carpeta="lineas" etiqueta="Foto de la línea empacada" />
+            <label className="text-sm md:col-span-2">Descripción (lo que verá el cliente)
+              <textarea rows={2} placeholder="Ej. Hidratación profunda para cabello reseco." value={form.descripcion} onChange={(e) => setForm({ ...form, descripcion: e.target.value })} className={input} />
+            </label>
+          </div>
+
+          {/* Elegir los productos aquí mismo, al crear la línea */}
+          <div className="mt-4 border-t border-gray-100 pt-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+              <h4 className="text-sm font-bold text-grafondo">
+                ¿Qué productos lleva esta línea?
+                <span className="ml-2 text-xs font-normal text-gray-500">{elegidos.size} marcado(s)</span>
+              </h4>
+              <div className="relative">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" size={15} />
+                <input placeholder="Buscar producto…" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} className="pl-8 pr-2 py-1.5 border border-gray-200 rounded-lg text-sm w-56" />
+              </div>
+            </div>
+            <div className="max-h-72 overflow-y-auto border border-gray-100 rounded-xl divide-y divide-gray-100">
+              {lista.map((p) => {
+                const marcado = elegidos.has(p.id)
+                const enOtra = p.linea_id && p.linea_id !== editando
+                return (
+                  <label key={p.id} className={`flex items-center gap-3 px-3 py-2 text-sm cursor-pointer ${marcado ? 'bg-pastel' : 'hover:bg-pastelsuave'}`}>
+                    <input type="checkbox" className="w-4 h-4 accent-[#123B4A]" checked={marcado} onChange={() => alternar(p.id)} />
+                    <span className="font-mono text-xs font-bold text-petroleo w-24">{p.codigo || '—'}</span>
+                    <span className="flex-1">{p.nombre}</span>
+                    <span className="text-xs text-gray-500">{etiquetaTamano(tamanoOz(p.nombre))}</span>
+                    <span className="text-xs text-gray-400 w-24 text-right">{formatMoney(p.precio)}</span>
+                    {enOtra && !marcado && <span className="text-xs text-amber-700 whitespace-nowrap">en {nombreLinea(p.linea_id)}</span>}
+                  </label>
+                )
+              })}
+              {lista.length === 0 && <p className="text-sm text-gray-400 p-3">No hay productos que coincidan.</p>}
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Si marcas uno que ya está en otra línea, se pasa a esta. Un producto está en una sola línea.
+            </p>
+          </div>
+
+          <div className="flex gap-2 mt-4">
+            <button disabled={guardando} className="bg-petroleo text-white rounded-lg px-4 py-2 font-semibold disabled:opacity-60">
+              {guardando ? 'Guardando…' : 'Guardar'}
+            </button>
             <button type="button" onClick={() => setEditando(null)} className="text-gray-500 px-4 py-2">Cancelar</button>
           </div>
         </form>
@@ -131,46 +194,28 @@ export default function Lineas() {
                 </div>
                 <button onClick={() => abrirForm(l)} className="text-gray-400 hover:text-petroleo p-1" title="Editar"><Pencil size={16} /></button>
                 <button onClick={() => borrar(l)} className="text-gray-400 hover:text-red-500 p-1" title="Borrar"><Trash2 size={16} /></button>
-                <button onClick={() => { setAbierta(esta ? null : l.id); setBusqueda('') }} className="text-petroleo p-1" title="Ver qué lleva">
+                <button onClick={() => setAbierta(esta ? null : l.id)} className="text-petroleo p-1" title="Ver qué lleva">
                   {esta ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                 </button>
               </div>
 
               {esta && (
-                <div className="border-t border-gray-100 p-3 grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Lleva estos productos</h4>
-                    {dentro.length === 0 && <p className="text-sm text-gray-400">Todavía no tiene productos.</p>}
-                    <div className="flex flex-col gap-1">
-                      {dentro.map((p) => (
-                        <div key={p.id} className="flex items-center gap-2 bg-pastelsuave rounded-lg px-2 py-1.5 text-sm">
-                          <span className="font-mono text-xs font-bold text-petroleo w-20">{p.codigo || '—'}</span>
-                          <span className="flex-1">{p.nombre}</span>
-                          <span className="text-xs text-gray-500">{etiquetaTamano(tamanoOz(p.nombre))}</span>
-                          <button onClick={() => poner(p, null)} className="text-gray-400 hover:text-red-500" title="Sacar de la línea"><X size={15} /></button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Agregar de la lista</h4>
-                    <div className="relative mb-2">
-                      <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" size={15} />
-                      <input placeholder="Buscar producto…" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} className="w-full pl-8 pr-2 py-1.5 border border-gray-200 rounded-lg text-sm" />
-                    </div>
-                    <div className="max-h-64 overflow-y-auto flex flex-col gap-1">
-                      {candidatos.map((p) => (
-                        <button key={p.id} onClick={() => poner(p, l.id)} className="flex items-center gap-2 text-left rounded-lg px-2 py-1.5 text-sm hover:bg-pastel">
-                          <Plus size={14} className="text-petroleo shrink-0" />
-                          <span className="flex-1">{p.nombre}</span>
-                          {p.linea_id && <span className="text-xs text-amber-700">ya está en otra línea</span>}
-                          <span className="text-xs text-gray-400">{formatMoney(p.precio)}</span>
-                        </button>
-                      ))}
-                      {candidatos.length === 0 && <p className="text-sm text-gray-400">No hay más productos.</p>}
-                    </div>
-                  </div>
+                <div className="border-t border-gray-100 p-3">
+                  {dentro.length === 0
+                    ? <p className="text-sm text-gray-400">Todavía no tiene productos. Toca el lápiz para elegirlos.</p>
+                    : (
+                      <div className="flex flex-col gap-1">
+                        {dentro.map((p) => (
+                          <div key={p.id} className="flex items-center gap-2 bg-pastelsuave rounded-lg px-2 py-1.5 text-sm">
+                            <Check size={14} className="text-green-700 shrink-0" />
+                            <span className="font-mono text-xs font-bold text-petroleo w-24">{p.codigo || '—'}</span>
+                            <span className="flex-1">{p.nombre}</span>
+                            <span className="text-xs text-gray-500">{etiquetaTamano(tamanoOz(p.nombre))}</span>
+                            <span className="text-xs text-gray-400">{formatMoney(p.precio)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                 </div>
               )}
             </div>
