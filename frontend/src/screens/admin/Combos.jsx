@@ -31,7 +31,12 @@ export default function Combos({ tipo, titulo, ejemplo }) {
 
   async function cargar() {
     const [{ data: c }, { data: p }, { data: s }, { data: cods }] = await Promise.all([
-      supabase.from('products').select('*, categories(nombre), product_items(cantidad, componente_id)').eq('tipo', tipo).order('nombre'),
+      // Hay que decir POR CUÁL de los dos caminos se une con product_items
+      // (el conjunto y la pieza apuntan los dos a products); si no, Supabase
+      // rechaza la consulta entera y la lista llega vacía.
+      supabase.from('products')
+        .select('*, categories(nombre), product_items!product_items_product_id_fkey(cantidad, componente_id)')
+        .eq('tipo', tipo).order('nombre'),
       supabase.from('products').select('id, nombre, codigo, precio, disponible, linea_id').eq('tipo', 'simple').order('nombre'),
       supabase.from('categories').select('*').order('nombre'),
       // TODOS los códigos ya usados, para que el que se arma solo no choque.
