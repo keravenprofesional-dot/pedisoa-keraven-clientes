@@ -12,6 +12,7 @@ import Catalog from './screens/clienta/Catalog'
 import Cart from './screens/clienta/Cart'
 import Checkout from './screens/clienta/Checkout'
 import MyOrders from './screens/clienta/MyOrders'
+import Seguimiento from './screens/clienta/Seguimiento'
 import MyPayments from './screens/clienta/MyPayments'
 import MyReceipts from './screens/clienta/MyReceipts'
 import OrderDetail from './screens/clienta/OrderDetail'
@@ -29,10 +30,12 @@ const Clients = lazy(() => import('./screens/admin/Clients'))
 const Settings = lazy(() => import('./screens/admin/Settings'))
 const Usuarios = lazy(() => import('./screens/admin/Usuarios'))
 const Roles = lazy(() => import('./screens/admin/Roles'))
+const SeguimientoAdmin = lazy(() => import('./screens/admin/Seguimiento'))
 
 const PANTALLAS = {
   '/admin/resumen': Dashboard,
   '/admin/pedidos': OrdersBoard,
+  '/admin/seguimiento': SeguimientoAdmin,
   '/admin/despacho': Dispatch,
   '/admin/clientas': Clients,
   '/admin/productos': Catalogo,
@@ -65,6 +68,7 @@ export default function App() {
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/mis-pedidos" element={<MyOrders />} />
           <Route path="/mis-pedidos/:id" element={<OrderDetail />} />
+          <Route path="/seguimiento" element={<Seguimiento />} />
           <Route path="/mis-pagos" element={<MyPayments />} />
           <Route path="/mis-recibos" element={<MyReceipts />} />
           <Route path="/perfil" element={<Profile />} />

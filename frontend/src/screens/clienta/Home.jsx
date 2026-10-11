@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ShoppingBag, Package, Receipt, CreditCard, User, Phone, Instagram } from 'lucide-react'
+import { ShoppingBag, Package, Receipt, CreditCard, User, Phone, Instagram, Route } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabaseClient'
 import { formatMoney } from '../../utils/format'
@@ -10,6 +10,7 @@ import logo from '../../assets/logo.jpg'
 // marca el teléfono de Keraven.
 const opciones = [
   { to: '/catalogo', icon: ShoppingBag, label: 'Realizar pedido', sub: 'Catálogo completo', destacado: true },
+  { to: '/seguimiento', icon: Route, label: 'Seguimiento de mi pedido', sub: 'Dónde va ahora mismo' },
   { to: '/mis-pedidos', icon: Package, label: 'Mis pedidos', sub: 'Historial' },
   { to: '/mis-recibos', icon: Receipt, label: 'Mis recibos', sub: 'Comprobantes' },
   { to: '/mis-pagos', icon: CreditCard, label: 'Mis pagos', sub: 'Balance y abonos' },
