@@ -1,7 +1,9 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ShoppingBag, Package, Receipt, CreditCard, User, Phone } from 'lucide-react'
+import { ShoppingBag, Package, Receipt, CreditCard, User, Phone, Instagram } from 'lucide-react'
 import Logo from '../../components/Logo'
 import { useAuth } from '../../context/AuthContext'
+import { supabase } from '../../lib/supabaseClient'
 import { formatMoney } from '../../utils/format'
 
 const opciones = [
@@ -16,6 +18,12 @@ const opciones = [
 export default function Home() {
   const { client } = useAuth()
   const debe = Number(client?.balance_pendiente || 0)
+  const [instagram, setInstagram] = useState('')
+
+  useEffect(() => {
+    supabase.from('company_settings').select('instagram').maybeSingle()
+      .then(({ data }) => setInstagram(data?.instagram || ''))
+  }, [])
 
   return (
     <div className="pb-28 md:pb-10">
@@ -59,6 +67,18 @@ export default function Home() {
             </Link>
           ))}
         </div>
+
+        {/* Nuestro Instagram */}
+        {instagram && (
+          <a
+            href={instagram}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-6 flex items-center justify-center gap-2 text-sm font-semibold text-negro/70 hover:text-negro py-3"
+          >
+            <Instagram size={18} /> Síguenos en Instagram
+          </a>
+        )}
       </div>
     </div>
   )

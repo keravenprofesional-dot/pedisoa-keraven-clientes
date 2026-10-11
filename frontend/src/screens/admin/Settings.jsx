@@ -7,6 +7,7 @@ const CAMPOS = [
   ['whatsapp', 'WhatsApp (el que ven los clientes)'],
   ['correo', 'Correo'],
   ['direccion', 'Dirección'],
+  ['instagram', 'Instagram (el enlace que ven los clientes)'],
 ]
 const TIPOS_CUENTA = ['Cuenta de Ahorros', 'Cuenta Corriente', 'Cuenta de Nómina']
 
