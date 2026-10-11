@@ -21,6 +21,8 @@ export default {
       },
       fontFamily: {
         sans: ['Inter', 'sans-serif'],
+        // Serif de revista de moda, para los títulos de la tienda.
+        display: ['"Playfair Display"', 'Georgia', 'serif'],
       },
     },
   },

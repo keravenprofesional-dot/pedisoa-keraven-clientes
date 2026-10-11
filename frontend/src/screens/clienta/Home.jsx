@@ -26,60 +26,53 @@ export default function Home() {
   }, [])
 
   return (
-    <div className="pb-28 md:pb-10">
-      {/* Portada negra con el logo dorado, como la marca */}
-      <div className="bg-negro text-crema px-6 pt-8 pb-14 text-center relative">
-        <div className="inline-block bg-negro rounded-2xl p-1 mb-3"><Logo size="lg" /></div>
-        <p className="text-[11px] tracking-[0.35em] text-oro/80 uppercase">Keraven Profesional</p>
-        <h1 className="text-2xl font-bold mt-3">
+    <div className="px-5 pb-28 md:pb-10 max-w-2xl mx-auto">
+      {/* Encabezado fino, con aire: el logo pequeño, un filito dorado y el
+          saludo en serif, como la portada de una revista. */}
+      <header className="text-center pt-8 pb-7">
+        <div className="inline-block rounded-xl overflow-hidden"><Logo size="sm" /></div>
+        <p className="mt-3 text-[10px] tracking-[0.42em] text-negro/45 uppercase">Keraven Profesional</p>
+        <div className="mx-auto mt-4 mb-5 h-px w-20 bg-gradient-to-r from-transparent via-oro to-transparent" />
+        <h1 className="font-display text-[2rem] leading-none text-negro">
           Hola{client?.full_name ? `, ${client.full_name.split(' ')[0]}` : ''}
         </h1>
-        <p className="text-crema/60 text-sm mt-1">¿Qué deseas hacer hoy?</p>
-        <div className="absolute bottom-0 left-0 right-0 h-[3px] borde-oro" />
-      </div>
-
-      <div className="px-5 -mt-8 max-w-2xl mx-auto">
-        {/* Solo el balance: el número de cliente ya está arriba, al lado de Salir */}
-        <div className="tarjeta-keraven rounded-full px-4 py-2 mb-5 mx-auto w-fit flex items-center gap-2 text-sm">
-          <span className="text-gray-500">Balance</span>
-          <span className={`font-bold ${debe > 0 ? 'text-red-600' : 'text-green-700'}`}>
-            {debe > 0 ? formatMoney(debe) : 'Al día'}
-          </span>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          {opciones.map(({ to, icon: Icono, label, destacado }, i) => (
-            <Link
-              key={i}
-              to={to}
-              className={`rounded-2xl p-5 flex flex-col items-center gap-3 active:scale-[0.98] transition ${
-                destacado
-                  ? 'col-span-2 bg-negro text-crema border border-oro/40 shadow-lg'
-                  : 'tarjeta-keraven'
-              }`}
-            >
-              <div className={`p-3 rounded-full ${destacado ? 'bg-oro text-negro' : 'bg-oro/12 text-oro'}`}>
-                <Icono size={24} />
-              </div>
-              <span className={`text-sm font-semibold text-center ${destacado ? 'text-crema' : 'text-grafondo'}`}>
-                {label}
-              </span>
-            </Link>
-          ))}
-        </div>
-
-        {/* Nuestro Instagram */}
-        {instagram && (
-          <a
-            href={instagram}
-            target="_blank"
-            rel="noreferrer"
-            className="mt-6 flex items-center justify-center gap-2 text-sm font-semibold text-negro/70 hover:text-negro py-3"
-          >
-            <Instagram size={18} /> Síguenos en Instagram
-          </a>
+        <p className="font-display italic text-gray-500 mt-2">¿Qué deseas hacer hoy?</p>
+        {debe > 0 && (
+          <p className="mt-3 text-xs text-gray-500">
+            Balance pendiente <span className="font-semibold text-red-600">{formatMoney(debe)}</span>
+          </p>
         )}
+      </header>
+
+      <div className="grid grid-cols-2 gap-3">
+        {opciones.map(({ to, icon: Icono, label, destacado }, i) => (
+          <Link
+            key={i}
+            to={to}
+            className={`rounded-2xl flex flex-col items-center justify-center gap-2.5 active:scale-[0.99] transition ${
+              destacado
+                ? 'col-span-2 bg-negro text-crema py-6 border border-oro/35'
+                : 'bg-white/80 border border-oro/20 py-6 hover:border-oro/55'
+            }`}
+          >
+            <Icono size={destacado ? 24 : 20} className={destacado ? 'text-oro' : 'text-oro/80'} strokeWidth={1.4} />
+            <span className={`font-display text-center ${destacado ? 'text-base text-crema' : 'text-sm text-negro/85'}`}>
+              {label}
+            </span>
+          </Link>
+        ))}
       </div>
+
+      {instagram && (
+        <a
+          href={instagram}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-8 flex items-center justify-center gap-2 text-xs tracking-[0.2em] uppercase text-negro/45 hover:text-negro py-3"
+        >
+          <Instagram size={15} strokeWidth={1.4} /> Síguenos
+        </a>
+      )}
     </div>
   )
 }

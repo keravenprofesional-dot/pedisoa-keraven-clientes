@@ -77,7 +77,7 @@ export function partirCodigo(codigo) {
 //   "Duo Pack de Shampoo Coco 16" → DP-COC-16   (no SH-COC-16, que es el shampoo)
 //   "Duo Kit Golden Black"        → DK-GOL
 export function generarCodigoCombo(nombre, tipo) {
-  const prefijo = tipo === 'duo_kit' ? 'DK' : 'DP'
+  const prefijo = tipo === 'duo_kit' ? 'DK' : tipo === 'linea' ? 'LN' : 'DP'
   const n = normalizar(nombre)
   const sabor = SABORES.find(([palabra]) => n.includes(palabra))?.[1]
   // El tamaño: con OZ si lo dice, y si no el último número suelto del nombre.

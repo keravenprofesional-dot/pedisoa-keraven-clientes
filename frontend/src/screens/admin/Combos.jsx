@@ -32,7 +32,7 @@ export default function Combos({ tipo, titulo, ejemplo }) {
   async function cargar() {
     const [{ data: c }, { data: p }, { data: s }, { data: cods }] = await Promise.all([
       supabase.from('products').select('*, categories(nombre), product_items(cantidad, componente_id)').eq('tipo', tipo).order('nombre'),
-      supabase.from('products').select('id, nombre, codigo, precio, disponible').eq('tipo', 'simple').order('nombre'),
+      supabase.from('products').select('id, nombre, codigo, precio, disponible, linea_id').eq('tipo', 'simple').order('nombre'),
       supabase.from('categories').select('*').order('nombre'),
       // TODOS los códigos ya usados, para que el que se arma solo no choque.
       supabase.from('products').select('id, codigo').not('codigo', 'is', null),
@@ -129,6 +129,15 @@ export default function Combos({ tipo, titulo, ejemplo }) {
           piezas.map((x) => ({ product_id: id, componente_id: x.producto.id, cantidad: x.cantidad }))
         )
         if (e2) throw new Error(e2.message)
+      }
+
+      // En una LÍNEA, sus productos además quedan marcados como de esa línea,
+      // para poder saber después qué lleva cada una.
+      if (tipo === 'linea') {
+        const dentro = piezas.map((x) => x.producto.id)
+        const fuera = productos.filter((p) => p.linea_id === id && !dentro.includes(p.id)).map((p) => p.id)
+        if (dentro.length) await supabase.from('products').update({ linea_id: id }).in('id', dentro)
+        if (fuera.length) await supabase.from('products').update({ linea_id: null }).in('id', fuera)
       }
       setEditando(null); setPiezas([]); setArmado(null); setForm(vacio)
       cargar()

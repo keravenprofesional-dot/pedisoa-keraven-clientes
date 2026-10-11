@@ -24,12 +24,15 @@ await como(db, SUP, `update company_settings set catalogo_publicado = false`)
 bien((await como(db, CLI, `select * from products`)).rows.length === 0, 'se puede volver a esconder')
 await como(db, SUP, `update company_settings set catalogo_publicado = true`)
 
-console.log('2) Líneas')
-const lin = (await como(db, SUP, `insert into lineas(nombre,descripcion) values('Línea de Coco','Hidratación profunda') returning id`)).rows[0].id
+console.log('2) Líneas (ahora se venden)')
+const lin = (await como(db, SUP, `insert into products(nombre,precio,tipo,descripcion) values('Línea de Coco',2400,'linea','Hidratación profunda') returning id`)).rows[0].id
 await como(db, SUP, `update products set linea_id=$1 where id in ($2,$3)`, [lin, sh, tr])
 bien((await como(db, CLI, `select * from products where linea_id=$1`, [lin])).rows.length === 2, 'la línea de Coco agrupa sus 2 productos')
-await falla(() => como(db, CLI, `insert into lineas(nombre) values('Pirata')`), 'el cliente NO puede crear líneas')
-await falla(() => como(db, SUP, `insert into lineas(nombre) values('Línea de Coco')`), 'no deja dos líneas con el mismo nombre')
+await como(db, SUP, `insert into product_items values($1,$2,1),($1,$3,1)`, [lin, sh, tr])
+bien((await como(db, CLI, `select * from product_items where product_id=$1`, [lin])).rows.length === 2, 'la línea lleva adentro sus 2 productos')
+bien(Number((await como(db, CLI, `select precio from products where id=$1`, [lin])).rows[0].precio) === 2400, 'la línea tiene su propio precio')
+await falla(() => como(db, CLI, `insert into products(nombre,precio,tipo) values('Pirata',1,'linea')`), 'el cliente NO puede crear líneas')
+await falla(() => como(db, SUP, `update products set linea_id = id where id=$1`, [lin]), 'una línea no se puede apuntar a sí misma')
 
 console.log('3) Duo Pack')
 const duo = (await como(db, SUP, `insert into products(nombre,precio,codigo,tipo) values('DUO PACK COCO 32 OZ',1600,'DUO-COC-32','duo_pack') returning id`)).rows[0].id

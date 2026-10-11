@@ -3,20 +3,28 @@ import { useNavigate } from 'react-router-dom'
 import { Search, ShoppingCart } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import ProductCard from '../../components/ProductCard'
+import ArmarCaja from '../../components/ArmarCaja'
 import { useCart } from '../../context/CartContext'
 import { normalizar } from '../../utils/codigoProducto'
-import { agruparCatalogo, etiquetaTamano } from '../../utils/ordenProducto'
-import ArmarCaja from '../../components/ArmarCaja'
+import { agruparCatalogo, agruparPorTamano, etiquetaTamano } from '../../utils/ordenProducto'
 
 const SIN_SECCION = 'Otros productos'
+// Las pestañas, en el orden que pidió Keraven: los conjuntos primero y
+// todos los productos sueltos al final.
+const PESTANAS = [
+  { tipo: 'linea', texto: 'Líneas' },
+  { tipo: 'duo_pack', texto: 'Duo Pack' },
+  { tipo: 'duo_kit', texto: 'Duo Kit' },
+  { tipo: 'simple', texto: 'Todos los productos' },
+]
 
 export default function Catalog() {
   const [products, setProducts] = useState([])
   const [categories, setCategories] = useState([])
-  const [categoryId, setCategoryId] = useState('all')
+  const [pestana, setPestana] = useState(null)
   const [query, setQuery] = useState('')
   const [loading, setLoading] = useState(true)
-  const [armando, setArmando] = useState(null) // caja que el cliente está armando
+  const [armando, setArmando] = useState(null)
   const { addItem, items } = useCart()
   const navigate = useNavigate()
 
@@ -31,29 +39,27 @@ export default function Catalog() {
     ])
     setProducts(prods || [])
     setCategories(cats || [])
+    // Abre en la primera pestaña que tenga algo, para no empezar en vacío.
+    setPestana((p) => p ?? (PESTANAS.find((x) => (prods || []).some((q) => q.tipo === x.tipo))?.tipo || 'simple'))
     setLoading(false)
   }
 
+  const cuantos = (tipo) => products.filter((p) => p.tipo === tipo).length
+
   const filtrados = useMemo(() => {
     const q = normalizar(query)
-    return products.filter((p) =>
-      (categoryId === 'all' || p.categoria_id === categoryId) &&
-      // La clienta busca por nombre: los códigos son de uso interno.
-      (!q || normalizar(p.nombre).includes(q))
-    )
-  }, [products, categoryId, query])
+    return products.filter((p) => p.tipo === pestana && (!q || normalizar(p.nombre).includes(q)))
+  }, [products, pestana, query])
 
-  // Por sección y, dentro de cada una, por tamaño: los de 32 oz nunca se
-  // mezclan con los de 10 oz, y los sabores van siempre en el mismo orden.
-  const secciones = useMemo(() => {
+  // Los sueltos van por sección y tamaño; los conjuntos, solo por tamaño.
+  const grupos = useMemo(() => {
+    if (pestana !== 'simple') return [[null, agruparPorTamano(filtrados)]]
     const nombres = new Map(categories.map((c) => [c.id, c.nombre]))
     return agruparCatalogo(filtrados, (p) => nombres.get(p.categoria_id), SIN_SECCION)
-  }, [filtrados, categories])
+  }, [filtrados, categories, pestana])
 
-  const totalItems = items.reduce((sum, i) => sum + i.cantidad, 0)
-
-  // Si el producto es una caja que se arma, primero se eligen los sabores.
   const agregar = (p) => (p.armado ? setArmando(p) : addItem(p))
+  const totalItems = items.reduce((sum, i) => sum + i.cantidad, 0)
 
   return (
     <div className="p-4 pb-28 md:pb-6 max-w-4xl mx-auto">
@@ -65,37 +71,40 @@ export default function Catalog() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Buscar producto…"
-          className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-petroleo"
+          className="w-full pl-10 pr-4 py-3 rounded-xl border border-oro/25 bg-white focus:outline-none focus:ring-2 focus:ring-negro"
         />
       </div>
 
       <div className="flex gap-2 overflow-x-auto pb-3 mb-2 -mx-4 px-4">
-        {[{ id: 'all', nombre: 'Todo' }, ...categories].map((c) => (
+        {PESTANAS.map(({ tipo, texto }) => (
           <button
-            key={c.id}
-            onClick={() => setCategoryId(c.id)}
+            key={tipo}
+            onClick={() => setPestana(tipo)}
             className={`px-4 py-2 rounded-full text-sm whitespace-nowrap ${
-              categoryId === c.id ? 'bg-negro text-oro font-semibold' : 'bg-white border border-oro/25 text-gray-500'
+              pestana === tipo ? 'bg-negro text-oro font-semibold' : 'bg-white border border-oro/25 text-gray-500'
             }`}
           >
-            {c.nombre}
+            {texto} <span className="opacity-60">{cuantos(tipo)}</span>
           </button>
         ))}
       </div>
 
       {loading ? (
         <p className="text-gray-400 text-center py-10">Cargando productos…</p>
-      ) : secciones.length === 0 ? (
-        <p className="text-center text-gray-400 py-10">No se encontraron productos.</p>
+      ) : filtrados.length === 0 ? (
+        <p className="text-center text-gray-400 py-10">
+          {query ? 'No se encontraron productos.' : 'Todavía no hay nada en esta sección.'}
+        </p>
       ) : (
-        secciones.map(([seccion, tamanos]) => (
-          <section key={seccion} className="mb-8">
-            <h2 className="font-bold text-negro uppercase tracking-wide text-sm mb-1 pb-1 border-b-2 border-oro/50">
-              {seccion}
-            </h2>
+        grupos.map(([seccion, tamanos]) => (
+          <section key={seccion ?? 'solo'} className="mb-8">
+            {seccion && (
+              <h2 className="font-bold text-negro uppercase tracking-wide text-sm mb-1 pb-1 border-b-2 border-oro/50">
+                {seccion}
+              </h2>
+            )}
             {tamanos.map(([oz, lista]) => (
               <div key={String(oz)} className="mt-5">
-                {/* Bien marcado para que no se confunda un tamaño con otro */}
                 <h3 className="flex items-center gap-2 mb-3">
                   <span className="bg-negro text-oro text-base font-extrabold rounded-lg px-3 py-1.5">
                     {etiquetaTamano(oz)}
@@ -115,8 +124,8 @@ export default function Catalog() {
       {armando && (
         <ArmarCaja
           producto={armando}
-          alCerrar={() => setArmando(null)}
           productos={products}
+          alCerrar={() => setArmando(null)}
           alAgregar={(sabores) => addItem(armando, sabores)}
         />
       )}
