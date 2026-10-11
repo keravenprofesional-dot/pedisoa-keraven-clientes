@@ -10,7 +10,7 @@ import { formatMoney } from '../../utils/format'
 // Un Duo Pack / Duo Kit es un producto que por dentro lleva otros productos.
 // Tiene su propio precio (normalmente más barato que comprarlos sueltos),
 // su foto empacado y su descripción.
-const vacio = { nombre: '', codigo: '', descripcion: '', precio: '', seccion: '', foto_url: null, disponible: true }
+const vacio = { nombre: '', codigo: '', descripcion: '', precio: '', foto_url: null, disponible: true }
 
 export default function Combos({ tipo, titulo, ejemplo }) {
   const [combos, setCombos] = useState([])
@@ -45,7 +45,7 @@ export default function Combos({ tipo, titulo, ejemplo }) {
     if (c === 'nuevo') { setForm(vacio); setPiezas([]); setEditando('nuevo'); return }
     setForm({
       nombre: c.nombre, codigo: c.codigo || '', descripcion: c.descripcion || '',
-      precio: String(c.precio ?? ''), seccion: c.categories?.nombre || '',
+      precio: String(c.precio ?? ''),
       foto_url: c.foto_url, disponible: c.disponible !== false,
     })
     setPiezas((c.product_items || []).map((i) => ({ producto: porId.get(i.componente_id) || { id: i.componente_id, nombre: '(producto borrado)', precio: 0 }, cantidad: i.cantidad })))
@@ -86,7 +86,9 @@ export default function Combos({ tipo, titulo, ejemplo }) {
         precio: Number(String(form.precio).replace(/[^\d.]/g, '')) || 0,
         foto_url: form.foto_url || null,
         disponible: form.disponible !== false,
-        categoria_id: await idDeSeccion(form.seccion),
+        // Los combos no van en las secciones de productos sueltos
+        // (Shampoo, Mascarilla…): tienen la suya propia.
+        categoria_id: await idDeSeccion(titulo),
       }
       let id = editando
       if (editando === 'nuevo') {
@@ -158,10 +160,6 @@ export default function Combos({ tipo, titulo, ejemplo }) {
             </label>
             <label className="text-sm">Código corto {!codigoAMano && <span className="text-xs text-green-700 font-semibold">· se arma solo</span>}
               <input value={form.codigo} onChange={(e) => { setCodigoAMano(true); setForm({ ...form, codigo: e.target.value.toUpperCase() }) }} className={`${input} font-mono`} />
-            </label>
-            <label className="text-sm">Sección donde aparece
-              <input list="secciones-combo" placeholder={`Ej. ${titulo}s`} value={form.seccion} onChange={(e) => setForm({ ...form, seccion: e.target.value })} className={input} />
-              <datalist id="secciones-combo">{secciones.map((s) => <option key={s.id} value={s.nombre} />)}</datalist>
             </label>
             <label className="text-sm">Precio del combo (RD$)
               <input inputMode="decimal" value={form.precio} onChange={(e) => setForm({ ...form, precio: e.target.value })} className={input} />
