@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabaseClient'
 import CampoFoto from '../../components/CampoFoto'
 import ArmadoCaja from './ArmadoCaja'
 import { borrarFoto } from '../../utils/subirFoto'
-import { codigoUnico, normalizar } from '../../utils/codigoProducto'
+import { generarCodigoCombo, normalizar } from '../../utils/codigoProducto'
 import { compararProductos } from '../../utils/ordenProducto'
 import { formatMoney } from '../../utils/format'
 
@@ -17,6 +17,7 @@ export default function Combos({ tipo, titulo, ejemplo }) {
   const [combos, setCombos] = useState([])
   const [productos, setProductos] = useState([])
   const [secciones, setSecciones] = useState([])
+  const [todosLosCodigos, setTodosLosCodigos] = useState([])
   const [form, setForm] = useState(vacio)
   const [piezas, setPiezas] = useState([]) // [{ producto, cantidad }]
   const [armado, setArmado] = useState(null)      // receta si el cliente elige los sabores
@@ -29,14 +30,17 @@ export default function Combos({ tipo, titulo, ejemplo }) {
   useEffect(() => { cargar() }, [tipo])
 
   async function cargar() {
-    const [{ data: c }, { data: p }, { data: s }] = await Promise.all([
+    const [{ data: c }, { data: p }, { data: s }, { data: cods }] = await Promise.all([
       supabase.from('products').select('*, categories(nombre), product_items(cantidad, componente_id)').eq('tipo', tipo).order('nombre'),
-      supabase.from('products').select('id, nombre, codigo, precio').eq('tipo', 'simple').order('nombre'),
+      supabase.from('products').select('id, nombre, codigo, precio, disponible').eq('tipo', 'simple').order('nombre'),
       supabase.from('categories').select('*').order('nombre'),
+      // TODOS los códigos ya usados, para que el que se arma solo no choque.
+      supabase.from('products').select('id, codigo').not('codigo', 'is', null),
     ])
     setCombos(c || [])
     setProductos(p || [])
     setSecciones(s || [])
+    setTodosLosCodigos(cods || [])
   }
 
   const porId = useMemo(() => new Map(productos.map((p) => [p.id, p])), [productos])
@@ -56,8 +60,13 @@ export default function Combos({ tipo, titulo, ejemplo }) {
   }
 
   function alEscribirNombre(nombre) {
-    const usados = new Set(combos.filter((c) => c.id !== editando && c.codigo).map((c) => c.codigo.toUpperCase()))
-    setForm({ ...form, nombre, codigo: codigoAMano ? form.codigo : codigoUnico(nombre, usados) })
+    if (codigoAMano) return setForm({ ...form, nombre })
+    // Prefijo propio (DP / DK) para no confundirse con un producto suelto.
+    const usados = new Set(todosLosCodigos.filter((c) => c.id !== editando).map((c) => c.codigo.toUpperCase()))
+    const base = generarCodigoCombo(nombre, tipo)
+    let codigo = base, n = 2
+    while (usados.has(codigo.toUpperCase())) codigo = `${base}-${n++}`
+    setForm({ ...form, nombre, codigo })
   }
 
   const agregar = (p) => setPiezas((prev) => prev.some((x) => x.producto.id === p.id)

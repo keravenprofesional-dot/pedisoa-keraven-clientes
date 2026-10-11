@@ -72,6 +72,26 @@ export function partirCodigo(codigo) {
   return { tipo: p[0], sabor: p[1], tamano: p[2] || '' }
 }
 
+// Código para una caja (Duo Pack o Duo Kit). Lleva su propio prefijo para
+// que nunca se confunda con un producto suelto:
+//   "Duo Pack de Shampoo Coco 16" → DP-COC-16   (no SH-COC-16, que es el shampoo)
+//   "Duo Kit Golden Black"        → DK-GOL
+export function generarCodigoCombo(nombre, tipo) {
+  const prefijo = tipo === 'duo_kit' ? 'DK' : 'DP'
+  const n = normalizar(nombre)
+  const sabor = SABORES.find(([palabra]) => n.includes(palabra))?.[1]
+  // El tamaño: con OZ si lo dice, y si no el último número suelto del nombre.
+  const conOz = [...n.matchAll(/(\d+)\s*(?:OZ|0Z)\b/g)].map((m) => m[1])
+  const sueltos = [...n.matchAll(/\b(\d{1,3})\b/g)].map((m) => m[1])
+  const tamano = conOz[conOz.length - 1] || sueltos[sueltos.length - 1]
+  const partes = [prefijo, sabor, tamano].filter(Boolean)
+  if (partes.length > 1) return partes.join('-')
+  // Sin sabor ni tamaño reconocidos: las primeras letras de su nombre.
+  const palabras = n.replace(/[^A-Z0-9 ]/g, ' ').split(/\s+/)
+    .filter((p) => p.length > 2 && !['DUO', 'PACK', 'KIT', 'DEL', 'LOS', 'LAS'].includes(p))
+  return [prefijo, palabras[0]?.slice(0, 3)].filter(Boolean).join('-') || prefijo
+}
+
 // Igual que generarCodigo pero garantizando que no se repita.
 // `usados` es un Set de códigos ya ocupados (en MAYÚSCULAS).
 export function codigoUnico(nombre, usados) {
