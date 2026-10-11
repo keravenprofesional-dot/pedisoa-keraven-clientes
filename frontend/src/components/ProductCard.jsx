@@ -5,7 +5,7 @@ export default function ProductCard({ product, onAdd }) {
   const agotado = !product.disponible
   return (
     <div className={`rounded-2xl overflow-hidden flex flex-col ${agotado ? 'bg-white border border-gray-200' : 'tarjeta-keraven'}`}>
-      <div className="relative aspect-square bg-cremaoscura flex items-center justify-center overflow-hidden">
+      <div className="relative aspect-square vitrina flex items-center justify-center overflow-hidden">
         {product.foto_url
           ? <img src={product.foto_url} alt={product.nombre} className={`w-full h-full object-cover ${agotado ? 'grayscale opacity-50' : ''}`} />
           : <span className="text-gray-300 text-sm">Sin foto</span>}

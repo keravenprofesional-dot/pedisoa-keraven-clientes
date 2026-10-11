@@ -8,14 +8,20 @@ body {
 }
 
 @layer components {
-  /* Fondo de la tienda: crema cálida con un brillo dorado arriba, al
-     estilo del logo de Keraven (dorado sobre negro). */
+  /* Fondo de la tienda: el mismo arena cálido de las fotos de Keraven, con
+     la luz suave cayendo desde arriba y un toque dorado. */
   .fondo-keraven {
-    background-color: #FBF6EA;
+    background-color: #F2E8DA;
     background-image:
-      radial-gradient(1100px 420px at 50% -220px, rgba(212, 164, 49, 0.22), transparent 70%),
-      linear-gradient(180deg, #FDFAF3 0%, #FBF6EA 38%, #F3EADA 100%);
+      radial-gradient(900px 520px at 50% -140px, rgba(255, 252, 245, 0.95), transparent 72%),
+      radial-gradient(1200px 500px at 50% -260px, rgba(212, 164, 49, 0.20), transparent 70%),
+      linear-gradient(180deg, #F7EFE3 0%, #F2E8DA 45%, #EADFCD 100%);
     background-attachment: fixed;
+  }
+
+  /* Tablilla clara donde se posan los productos, como en las fotos. */
+  .vitrina {
+    background-image: linear-gradient(180deg, #FFFDF8 0%, #F6EFE3 100%);
   }
 
   /* Filito dorado como el del logo, para los bordes de arriba. */

@@ -2,6 +2,7 @@ import { Outlet } from 'react-router-dom'
 import { LogOut } from 'lucide-react'
 import BottomNav from '../components/BottomNav'
 import BotonVolver from '../components/BotonVolver'
+import MusicaFondo from '../components/MusicaFondo'
 import Logo from '../components/Logo'
 import { useAuth } from '../context/AuthContext'
 
@@ -35,6 +36,7 @@ export default function ClientLayout() {
       </header>
 
       <Outlet />
+      <MusicaFondo />
       <BottomNav />
     </div>
   )
