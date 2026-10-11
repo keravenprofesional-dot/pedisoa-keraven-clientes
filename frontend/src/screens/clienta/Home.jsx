@@ -28,8 +28,9 @@ export default function Home() {
   return (
     <div className="px-5 pb-28 md:pb-10 max-w-2xl mx-auto">
       {/* Sin franjas negras: el logo se posa sobre el fondo claro */}
+      {/* El logo a la izquierda y el texto centrado: así lo quiso Keraven */}
       <header className="text-center pt-8 pb-6">
-        <Logo size="lg" />
+        <Logo size="lg" centrado={false} />
         <p className="mt-4 text-[11px] tracking-[0.45em] text-negro/50 uppercase">Profesional</p>
         <div className="mx-auto mt-4 flex items-center justify-center gap-3">
           <span className="h-px w-14 bg-gradient-to-r from-transparent to-oro/70" />

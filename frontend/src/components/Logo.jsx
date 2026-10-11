@@ -1,6 +1,8 @@
 import logo from '../assets/logo.jpg'
 
-export default function Logo({ size = 'md' }) {
+// `centrado` existe porque las imágenes son de bloque: sin mx-auto se
+// quedan a la izquierda, por mucho que el texto alrededor esté centrado.
+export default function Logo({ size = 'md', centrado = true }) {
   const heights = {
     sm: 'h-10',
     md: 'h-16',
@@ -11,8 +13,7 @@ export default function Logo({ size = 'md' }) {
     <img
       src={logo}
       alt="Keraven Profesional"
-      // mx-auto porque las imágenes son de bloque: sin esto no se centran.
-      className={`${heights[size]} w-auto mx-auto rounded-xl object-contain`}
+      className={`${heights[size]} w-auto ${centrado ? 'mx-auto' : ''} rounded-xl object-contain`}
     />
   )
 }
