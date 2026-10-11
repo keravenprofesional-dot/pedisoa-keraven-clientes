@@ -22,7 +22,7 @@ export default function ClientLayout() {
           <Logo size="sm" />
           <span className="font-bold tracking-wide text-orosuave">Pedidos Keraven</span>
           <span className="flex-1" />
-          <span className="hidden sm:block text-xs text-crema/50">{client?.client_number}</span>
+          <span className="text-xs text-crema/60">{client?.client_number}</span>
           <button
             onClick={salir}
             className="flex items-center gap-1 text-sm text-crema/70 hover:text-orosuave px-2 py-1"

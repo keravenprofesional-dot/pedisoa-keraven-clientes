@@ -31,18 +31,12 @@ export default function Home() {
       </div>
 
       <div className="px-5 -mt-8 max-w-2xl mx-auto">
-        {/* Su número de cliente y lo que debe, a la vista */}
-        <div className="tarjeta-keraven rounded-2xl px-4 py-3 mb-5 flex items-center justify-between gap-3">
-          <div>
-            <p className="text-[11px] uppercase tracking-wider text-gray-400">Número de cliente</p>
-            <p className="font-bold text-negro">{client?.client_number || '—'}</p>
-          </div>
-          <div className="text-right">
-            <p className="text-[11px] uppercase tracking-wider text-gray-400">Balance</p>
-            <p className={`font-bold ${debe > 0 ? 'text-red-600' : 'text-green-700'}`}>
-              {debe > 0 ? formatMoney(debe) : 'Al día'}
-            </p>
-          </div>
+        {/* Solo el balance: el número de cliente ya está arriba, al lado de Salir */}
+        <div className="tarjeta-keraven rounded-full px-4 py-2 mb-5 mx-auto w-fit flex items-center gap-2 text-sm">
+          <span className="text-gray-500">Balance</span>
+          <span className={`font-bold ${debe > 0 ? 'text-red-600' : 'text-green-700'}`}>
+            {debe > 0 ? formatMoney(debe) : 'Al día'}
+          </span>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
