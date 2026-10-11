@@ -11,7 +11,8 @@ export default function Logo({ size = 'md' }) {
     <img
       src={logo}
       alt="Keraven Profesional"
-      className={`${heights[size]} w-auto rounded-lg object-contain`}
+      // mx-auto porque las imágenes son de bloque: sin esto no se centran.
+      className={`${heights[size]} w-auto mx-auto rounded-xl object-contain`}
     />
   )
 }

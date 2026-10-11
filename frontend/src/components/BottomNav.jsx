@@ -10,21 +10,24 @@ const items = [
 
 export default function BottomNav() {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-negro flex justify-around pt-1 pb-2 md:hidden z-40 shadow-[0_-6px_20px_-12px_rgba(0,0,0,.6)]">
-      <div className="absolute top-0 left-0 right-0 h-[2px] borde-oro" />
+    <nav className="fixed bottom-0 left-0 right-0 bg-crema/95 backdrop-blur border-t border-oro/30 flex justify-around pt-1.5 pb-2 md:hidden z-40">
       {items.map(({ to, icon: Icon, label }) => (
         <NavLink
           key={to}
           to={to}
           end={to === '/'}
           className={({ isActive }) =>
-            `flex flex-col items-center gap-0.5 px-3 pt-2 pb-1 text-xs transition ${
-              isActive ? 'text-oro font-semibold' : 'text-crema/45'
+            `flex flex-col items-center gap-0.5 px-3 pt-1 pb-0.5 text-xs transition ${
+              isActive ? 'text-negro font-semibold' : 'text-negro/40'
             }`
           }
         >
-          <Icon size={21} />
-          {label}
+          {({ isActive }) => (
+            <>
+              <Icon size={21} strokeWidth={isActive ? 1.9 : 1.4} className={isActive ? 'text-oro' : ''} />
+              {label}
+            </>
+          )}
         </NavLink>
       ))}
     </nav>

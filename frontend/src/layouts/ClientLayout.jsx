@@ -15,26 +15,27 @@ export default function ClientLayout() {
 
   return (
     <div className="min-h-screen fondo-keraven">
-      {/* Franja negra con lo de la clienta a la derecha, legible */}
-      <header className="sticky top-0 z-30 bg-negro text-crema">
-        <div className="flex items-start justify-between gap-3 px-4 py-2.5">
-          <BotonVolver className="text-orosuave mt-1" />
-          <div className="ml-auto text-right leading-tight">
+      {/* Barra clara y delgada. Sin bloques negros: la página respira. */}
+      <header className="sticky top-0 z-30 bg-crema/95 backdrop-blur border-b border-oro/30">
+        <div className="flex items-center justify-between gap-3 px-4 h-12">
+          <BotonVolver className="text-negro/70" />
+          <div className="ml-auto flex items-center gap-4">
+            {nombre && (
+              <span className="font-display text-negro text-[15px]">Hola, {nombre}</span>
+            )}
             <button
               onClick={salir}
-              className="inline-flex items-center gap-1.5 text-[15px] font-medium text-crema hover:text-oro"
+              className="inline-flex items-center gap-1.5 text-sm text-negro/60 hover:text-negro"
             >
-              <LogOut size={17} strokeWidth={1.6} /> Salir
+              <LogOut size={16} strokeWidth={1.6} /> Salir
             </button>
-            {nombre && <p className="font-display text-oro text-[15px] mt-0.5">Hola, {nombre}</p>}
-            {client?.client_number && (
-              <p className="text-[11px] text-crema/55 mt-0.5">
-                Tu código de clienta: <span className="text-crema/80">{client.client_number}</span>
-              </p>
-            )}
           </div>
         </div>
-        <div className="h-px borde-oro" />
+        {client?.client_number && (
+          <p className="px-4 pb-1.5 text-right text-[11px] text-negro/40">
+            Tu código de clienta: <span className="text-negro/70">{client.client_number}</span>
+          </p>
+        )}
       </header>
 
       <Outlet />
