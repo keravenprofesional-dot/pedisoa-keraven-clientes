@@ -96,13 +96,21 @@ export default function Lineas() {
     cargar()
   }
 
-  // Lista para elegir: todos los productos sueltos, con buscador.
-  const lista = useMemo(() => {
+  // Los que ya marcaste, para la columna de la izquierda.
+  const dentroDelForm = useMemo(
+    () => productos.filter((p) => elegidos.has(p.id)).sort(compararProductos),
+    [productos, elegidos]
+  )
+
+  // Los que faltan por agregar, para la columna de la derecha.
+  const candidatos = useMemo(() => {
     const q = normalizar(busqueda)
     return productos
+      .filter((p) => !elegidos.has(p.id))
       .filter((p) => !q || normalizar(p.nombre).includes(q) || (p.codigo || '').toUpperCase().includes(q))
       .sort(compararProductos)
-  }, [productos, busqueda])
+      .slice(0, 40)
+  }, [productos, elegidos, busqueda])
 
   const sinLinea = productos.filter((p) => !p.linea_id).length
   const input = 'mt-1 w-full border border-gray-200 rounded-lg px-3 py-2'
@@ -134,38 +142,43 @@ export default function Lineas() {
             </label>
           </div>
 
-          {/* Elegir los productos aquí mismo, al crear la línea */}
-          <div className="mt-4 border-t border-gray-100 pt-4">
-            <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-              <h4 className="text-sm font-bold text-grafondo">
-                ¿Qué productos lleva esta línea?
-                <span className="ml-2 text-xs font-normal text-gray-500">{elegidos.size} marcado(s)</span>
+          {/* Igual que en Duo Pack: a la izquierda lo que lleva, a la derecha
+              la lista para ir agregando. */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 border-t border-gray-100 pt-4">
+            <div>
+              <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                Qué lleva esta línea ({elegidos.size})
               </h4>
-              <div className="relative">
-                <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" size={15} />
-                <input placeholder="Buscar producto…" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} className="pl-8 pr-2 py-1.5 border border-gray-200 rounded-lg text-sm w-56" />
-              </div>
-            </div>
-            <div className="max-h-72 overflow-y-auto border border-gray-100 rounded-xl divide-y divide-gray-100">
-              {lista.map((p) => {
-                const marcado = elegidos.has(p.id)
-                const enOtra = p.linea_id && p.linea_id !== editando
-                return (
-                  <label key={p.id} className={`flex items-center gap-3 px-3 py-2 text-sm cursor-pointer ${marcado ? 'bg-pastel' : 'hover:bg-pastelsuave'}`}>
-                    <input type="checkbox" className="w-4 h-4 accent-[#123B4A]" checked={marcado} onChange={() => alternar(p.id)} />
-                    <span className="font-mono text-xs font-bold text-petroleo w-24">{p.codigo || '—'}</span>
+              {elegidos.size === 0 && <p className="text-sm text-gray-400">Elige los productos de la derecha.</p>}
+              <div className="flex flex-col gap-1">
+                {dentroDelForm.map((p) => (
+                  <div key={p.id} className="flex items-center gap-2 bg-pastelsuave rounded-lg px-2 py-1.5 text-sm">
+                    <span className="font-mono text-xs font-bold text-petroleo w-20">{p.codigo || '—'}</span>
                     <span className="flex-1">{p.nombre}</span>
                     <span className="text-xs text-gray-500">{etiquetaTamano(tamanoOz(p.nombre))}</span>
-                    <span className="text-xs text-gray-400 w-24 text-right">{formatMoney(p.precio)}</span>
-                    {enOtra && !marcado && <span className="text-xs text-amber-700 whitespace-nowrap">en {nombreLinea(p.linea_id)}</span>}
-                  </label>
-                )
-              })}
-              {lista.length === 0 && <p className="text-sm text-gray-400 p-3">No hay productos que coincidan.</p>}
+                    <button type="button" onClick={() => alternar(p.id)} className="text-gray-400 hover:text-red-500" title="Sacar de la línea"><X size={15} /></button>
+                  </div>
+                ))}
+              </div>
             </div>
-            <p className="text-xs text-gray-500 mt-1">
-              Si marcas uno que ya está en otra línea, se pasa a esta. Un producto está en una sola línea.
-            </p>
+            <div>
+              <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Agregar de tu lista</h4>
+              <div className="relative mb-2">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" size={15} />
+                <input placeholder="Buscar producto…" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} className="w-full pl-8 pr-2 py-1.5 border border-gray-200 rounded-lg text-sm" />
+              </div>
+              <div className="max-h-56 overflow-y-auto flex flex-col gap-1">
+                {candidatos.map((p) => (
+                  <button key={p.id} type="button" onClick={() => alternar(p.id)} className="flex items-center gap-2 text-left rounded-lg px-2 py-1.5 text-sm hover:bg-pastel">
+                    <Plus size={14} className="text-petroleo shrink-0" />
+                    <span className="flex-1">{p.nombre}</span>
+                    {p.linea_id && p.linea_id !== editando && <span className="text-xs text-amber-700 whitespace-nowrap">en {nombreLinea(p.linea_id)}</span>}
+                    <span className="text-xs text-gray-400">{formatMoney(p.precio)}</span>
+                  </button>
+                ))}
+                {candidatos.length === 0 && <p className="text-sm text-gray-400">No hay más productos.</p>}
+              </div>
+            </div>
           </div>
 
           <div className="flex gap-2 mt-4">
