@@ -18,6 +18,12 @@ export default {
         orosuave: '#EBCB76',
         crema: '#FBF6EA',
         cremaoscura: '#F3EADA',
+        // El dorado #D4A431 es precioso en una línea, pero como TEXTO sobre
+        // crema no se lee (contraste 2.2). Este es el dorado oscuro del logo:
+        // el único que se usa para letras.
+        oroprof: '#8C6A14',
+        arena: '#F2E8DA',
+        tinta: '#2B2522',
       },
       fontFamily: {
         sans: ['Inter', 'sans-serif'],

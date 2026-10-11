@@ -1,10 +1,11 @@
+import { Suspense, lazy } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import ProtectedRoute, { InicioPersonal } from './components/ProtectedRoute'
 import { MENU_ADMIN } from './utils/menuAdmin'
 
 import ClientLayout from './layouts/ClientLayout'
-import AdminLayout from './layouts/AdminLayout'
 
+// Lo de la clienta viaja en la primera carga: es lo que abre el 99% de la gente.
 import Entrada from './screens/Entrada'
 import Home from './screens/clienta/Home'
 import Catalog from './screens/clienta/Catalog'
@@ -14,14 +15,18 @@ import MyOrders from './screens/clienta/MyOrders'
 import OrderDetail from './screens/clienta/OrderDetail'
 import Profile from './screens/clienta/Profile'
 
-import Dashboard from './screens/admin/Dashboard'
-import OrdersBoard from './screens/admin/OrdersBoard'
-import Dispatch from './screens/admin/Dispatch'
-import Catalogo from './screens/admin/Catalogo'
-import Clients from './screens/admin/Clients'
-import Settings from './screens/admin/Settings'
-import Usuarios from './screens/admin/Usuarios'
-import Roles from './screens/admin/Roles'
+// El panel del personal se baja SOLO cuando alguien del personal entra.
+// Así la clienta no paga por descargar el lector de Excel, las pantallas de
+// usuarios, roles ni el armador de cajas, que nunca va a abrir.
+const AdminLayout = lazy(() => import('./layouts/AdminLayout'))
+const Dashboard = lazy(() => import('./screens/admin/Dashboard'))
+const OrdersBoard = lazy(() => import('./screens/admin/OrdersBoard'))
+const Dispatch = lazy(() => import('./screens/admin/Dispatch'))
+const Catalogo = lazy(() => import('./screens/admin/Catalogo'))
+const Clients = lazy(() => import('./screens/admin/Clients'))
+const Settings = lazy(() => import('./screens/admin/Settings'))
+const Usuarios = lazy(() => import('./screens/admin/Usuarios'))
+const Roles = lazy(() => import('./screens/admin/Roles'))
 
 const PANTALLAS = {
   '/admin/resumen': Dashboard,
@@ -34,40 +39,50 @@ const PANTALLAS = {
   '/admin/roles': Roles,
 }
 
+function Cargando() {
+  return (
+    <div className="flex items-center justify-center py-24">
+      <span className="h-8 w-8 animate-spin rounded-full border-2 border-oro/30 border-t-oro" />
+    </div>
+  )
+}
+
 export default function App() {
   return (
-    <Routes>
-      {/* Una sola entrada con dos pestañas: clienta o personal */}
-      <Route path="/login" element={<Entrada inicio="clienta" />} />
-      <Route path="/personal" element={<Entrada inicio="personal" />} />
+    <Suspense fallback={<Cargando />}>
+      <Routes>
+        {/* Una sola entrada con dos pestañas: clienta o personal */}
+        <Route path="/login" element={<Entrada inicio="clienta" />} />
+        <Route path="/personal" element={<Entrada inicio="personal" />} />
 
-      {/* Clienta */}
-      <Route element={<ProtectedRoute tipo="clienta"><ClientLayout /></ProtectedRoute>}>
-        <Route path="/" element={<Home />} />
-        <Route path="/catalogo" element={<Catalog />} />
-        <Route path="/carrito" element={<Cart />} />
-        <Route path="/checkout" element={<Checkout />} />
-        <Route path="/mis-pedidos" element={<MyOrders />} />
-        <Route path="/mis-pedidos/:id" element={<OrderDetail />} />
-        <Route path="/perfil" element={<Profile />} />
-      </Route>
+        {/* Clienta */}
+        <Route element={<ProtectedRoute tipo="clienta"><ClientLayout /></ProtectedRoute>}>
+          <Route path="/" element={<Home />} />
+          <Route path="/catalogo" element={<Catalog />} />
+          <Route path="/carrito" element={<Cart />} />
+          <Route path="/checkout" element={<Checkout />} />
+          <Route path="/mis-pedidos" element={<MyOrders />} />
+          <Route path="/mis-pedidos/:id" element={<OrderDetail />} />
+          <Route path="/perfil" element={<Profile />} />
+        </Route>
 
-      {/* Personal: cada pantalla exige su permiso */}
-      <Route element={<ProtectedRoute tipo="personal"><AdminLayout /></ProtectedRoute>}>
-        <Route path="/admin" element={<InicioPersonal />} />
-        {MENU_ADMIN.map((item) => {
-          const Pantalla = PANTALLAS[item.to]
-          return (
-            <Route
-              key={item.to}
-              path={item.to}
-              element={<ProtectedRoute tipo="personal" item={item}><Pantalla /></ProtectedRoute>}
-            />
-          )
-        })}
-      </Route>
+        {/* Personal: cada pantalla exige su permiso */}
+        <Route element={<ProtectedRoute tipo="personal"><AdminLayout /></ProtectedRoute>}>
+          <Route path="/admin" element={<InicioPersonal />} />
+          {MENU_ADMIN.map((item) => {
+            const Pantalla = PANTALLAS[item.to]
+            return (
+              <Route
+                key={item.to}
+                path={item.to}
+                element={<ProtectedRoute tipo="personal" item={item}><Pantalla /></ProtectedRoute>}
+              />
+            )
+          })}
+        </Route>
 
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Suspense>
   )
 }

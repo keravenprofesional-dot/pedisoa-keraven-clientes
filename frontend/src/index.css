@@ -40,4 +40,64 @@ body {
     border-color: rgba(212, 164, 49, 0.65);
     box-shadow: 0 2px 4px rgba(13, 13, 13, 0.05), 0 14px 30px -18px rgba(13, 13, 13, 0.35);
   }
+
+  /* Filito dorado de 1px para rematar barras y encabezados, en vez de una
+     raya plana que parece borde de formulario. */
+  .filo-oro {
+    height: 1px;
+    background-image: linear-gradient(90deg, transparent, rgba(212, 164, 49, .55) 14%, #D4A431 50%, rgba(212, 164, 49, .55) 86%, transparent);
+  }
+
+  /* Destello de pasarela: la luz de estudio que cruza en diagonal. */
+  .destello { position: relative; overflow: hidden; }
+  .destello::after {
+    content: ''; position: absolute; inset: -40% -20%; pointer-events: none;
+    background-image: linear-gradient(104deg, transparent 36%, rgba(255, 255, 255, .62) 46%, rgba(255, 255, 255, 0) 58%);
+  }
+
+  /* PLACA: lo que va donde iría la foto. Se sostiene sola, sin decir "Sin foto". */
+  .placa {
+    position: relative; overflow: hidden;
+    background-image:
+      radial-gradient(130% 85% at 50% -12%, rgba(255, 255, 255, .92), transparent 62%),
+      linear-gradient(158deg, var(--p1, #FFFDF8) 0%, var(--p2, #F3EADA) 54%, var(--p3, #E3D6BE) 100%);
+  }
+  .placa::before {
+    content: ''; position: absolute; inset: -40% -20%; pointer-events: none;
+    background-image: linear-gradient(104deg, transparent 38%, rgba(255, 255, 255, .5) 47%, rgba(255, 255, 255, 0) 57%);
+  }
+  .placa::after {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    box-shadow: inset 0 0 0 1px rgba(212, 164, 49, .26);
+  }
+
+  /* La inicial gigante, en dorado de lámina. El color de respaldo es por si
+     el navegador no sabe recortar el degradado sobre la letra. */
+  .placa-inicial {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-weight: 400; line-height: 1; letter-spacing: -.045em; color: #B98E2A;
+  }
+  @supports (-webkit-background-clip: text) {
+    .placa-inicial {
+      color: transparent; -webkit-background-clip: text; background-clip: text;
+      background-image: linear-gradient(176deg, #FBEFC6 0%, #E3C06A 28%, #D4A431 54%, #94701A 100%);
+    }
+  }
+
+  /* El color de cada sabor. Van aquí y no armados con texto en el JSX, porque
+     una clase construida al vuelo la borra Tailwind al compilar y la tarjeta
+     sale blanca en producción. */
+  .f-mie  { --p1:#FDF6E4; --p2:#F2E2B8; --p3:#DCC388; }
+  .f-coc  { --p1:#FFFDF9; --p2:#F4EEE3; --p3:#E2D8C6; }
+  .f-cac  { --p1:#F8EBDF; --p2:#E5CEB6; --p3:#C3A183; }
+  .f-zan  { --p1:#FDF1E3; --p2:#F7DCBE; --p3:#E7BF93; }
+  .f-ban  { --p1:#FDFAE6; --p2:#F5EDBD; --p3:#E3D68E; }
+  .f-det  { --p1:#EFECE8; --p2:#B9B3AB; --p3:#2B2724; }
+  .f-jen  { --p1:#F9F3E4; --p2:#EADCBB; --p3:#CBB684; }
+  .f-gol  { --p1:#F6EDD8; --p2:#DCC07D; --p3:#8C6A14; }
+  .f-riz  { --p1:#F7F2EB; --p2:#E7DBCB; --p3:#CBB8A1; }
+  .f-cre  { --p1:#F2F5ED; --p2:#DDE5D3; --p3:#B9C8AC; }
+  .f-bri  { --p1:#FDF8EC; --p2:#F0E5CA; --p3:#D9C38F; }
+  .f-mol  { --p1:#F4F2F6; --p2:#E3DFE8; --p3:#C3BDCC; }
+  .f-base { --p1:#FFFDF8; --p2:#F3EADA; --p3:#E3D6BE; }
 }
