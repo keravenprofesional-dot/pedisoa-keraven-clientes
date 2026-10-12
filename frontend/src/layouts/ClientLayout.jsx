@@ -2,7 +2,7 @@ import { Outlet } from 'react-router-dom'
 import { LogOut } from 'lucide-react'
 import BottomNav from '../components/BottomNav'
 import BotonVolver from '../components/BotonVolver'
-import MusicaFondo from '../components/MusicaFondo'
+import { MusicaProvider, BotonMusica } from '../components/MusicaFondo'
 import { useAuth } from '../context/AuthContext'
 
 export default function ClientLayout() {
@@ -13,6 +13,7 @@ export default function ClientLayout() {
   }
 
   return (
+    <MusicaProvider>
     <div className="min-h-screen fondo-keraven">
       <header className="sticky top-0 z-30">
         <div className="bg-crema/92 backdrop-blur-md">
@@ -40,8 +41,12 @@ export default function ClientLayout() {
       </header>
 
       <Outlet />
-      <MusicaFondo />
+      {/* En el celular la música vive dentro de la barra de abajo, entre
+          Pedidos y Perfil. En pantalla grande no hay barra, así que ahí se
+          queda la burbuja. */}
+      <BotonMusica className="hidden md:grid" />
       <BottomNav />
     </div>
+    </MusicaProvider>
   )
 }
