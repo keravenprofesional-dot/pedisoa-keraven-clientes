@@ -25,6 +25,9 @@ export async function nuevaBase() {
   for (const archivo of fs.readdirSync(CARPETA).filter((f) => f.endsWith('.sql')).sort()) {
     await db.exec(fs.readFileSync(path.join(CARPETA, archivo), 'utf8'))
   }
+  // Solo en la copia de pruebas: a los clientes de prueba que no traen cédula se les
+  // inventa una (la cédula es obligatoria desde el 14-oct). prueba_cedula.mjs prueba la regla.
+  await db.exec(`alter table clients alter column cedula set default lpad((floor(random() * 1e11))::bigint::text, 11, '0')`)
   return db
 }
 

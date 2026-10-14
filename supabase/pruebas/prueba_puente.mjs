@@ -4,7 +4,10 @@ import { nuevaBase, como } from './base.mjs'
 import fs from 'fs'
 const db = await nuevaBase()
 await db.exec(fs.readFileSync('C:/Keraven-Systems-Masters/schema.sql', 'utf8'))
-await db.exec(fs.readFileSync(new URL('../migrations/20261014060000_puente_con_systems_masters.sql', import.meta.url), 'utf8'))
+// Con las tablas del ERP ya puestas, se vuelven a pasar las migraciones del puente
+// (en la base real el ERP ya existía cuando se aplicaron)
+for (const m of ['20261014060000_puente_con_systems_masters.sql', '20261014090000_erp_completar_productos.sql'])
+  await db.exec(fs.readFileSync(new URL('../migrations/' + m, import.meta.url), 'utf8'))
 const q = (s, p) => db.query(s, p)
 let ok = 0, mal = 0
 const bien = (c, m) => { c ? (ok++, console.log('  OK   ', m)) : (mal++, console.log('  FALLA', m)) }
@@ -14,7 +17,7 @@ const N = Number
 await q(`update company_settings set catalogo_publicado = true`)
 const SUP = await nu('s@x'), ANA = await nu('ana@x'), BEA = await nu('bea@x')
 await q(`insert into profiles(id,tipo,es_supremo,usuario,telefono,full_name) values($1,'personal',true,'sup','1','D')`, [SUP])
-for (const [u, n, t, ced] of [[ANA, 'ANA PEREZ', '8091110000', '001-1234567-8'], [BEA, 'BEA GOMEZ', '809-222-0000', null]]) {
+for (const [u, n, t, ced] of [[ANA, 'ANA PEREZ', '8091110000', '001-1234567-8'], [BEA, 'BEA GOMEZ', '809-222-0000', '402-0000000-1']]) {
   await q(`insert into profiles(id,tipo,full_name) values($1,'clienta',$2)`, [u, n])
   await q(`insert into clients(profile_id,full_name,telefono_login,cedula,direccion,sector) values($1,$2,$3,$4,'C/ 1','Los Mina')`, [u, n, t, ced])
 }
@@ -133,5 +136,40 @@ bien(!vista, 'un cliente ya no puede leer la vista vieja')
 await como(db, SUP, `insert into erp_equivalencias(product_id,producto_id,puesto_por) values($1,$2,$3)`, [P_LI, E_TR, SUP])
 const o7 = await pedir(ANA, [{ product_id: P_LI, cantidad: 1 }])
 bien(await prods((await venta(o7.id)).id) === '1× Tratamiento Coco 10 oz', 'equivalencia puesta desde la pantalla: el pedido ya entra con su producto')
+console.log(`\nResultado final: ${ok} bien, ${mal} fallas`)
+if (mal) process.exitCode = 1
+
+console.log('\n11) Al poner un enlace, las ventas que ya llegaron se completan solas')
+const P_X = (await q(`insert into products(nombre,precio,stock) values('Gotero 4',300,100) returning id`)).rows[0].id
+const P_Y = (await q(`insert into products(nombre,precio,stock) values('Gotica 4',200,100) returning id`)).rows[0].id
+const P_DP2 = (await q(`insert into products(nombre,precio,stock,tipo) values('Duo Goteros',450,100,'duo_pack') returning id`)).rows[0].id
+await q(`insert into product_items(product_id,componente_id,cantidad) values($1,$2,1),($1,$3,1)`, [P_DP2, P_X, P_Y])
+const E_GO = (await q(`insert into productos(nombre,codigo) values('Gotero crecimiento 4oz','GOTE-1') returning id`)).rows[0].id
+const E_GI = (await q(`insert into productos(nombre,codigo) values('Gotica brillo 4oz','GOTI-1') returning id`)).rows[0].id
+const o8 = await pedir(ANA, [{ product_id: P_X, cantidad: 2 }, { product_id: P_DP2, cantidad: 1 }])
+let v8 = await venta(o8.id)
+bien(await prods(v8.id) === '' && v8.observaciones.includes('2× Gotero 4') && v8.observaciones.includes('Gotica 4'), 'sin enlaces: llegan como nota')
+await como(db, SUP, `insert into erp_equivalencias(product_id,producto_id) values($1,$2)`, [P_X, E_GO])
+v8 = await venta(o8.id)
+bien(await prods(v8.id) === '3× Gotero crecimiento 4oz', 'enlazado el gotero: 2 sueltos + 1 del Duo, ya en la venta: ' + await prods(v8.id))
+bien(!v8.observaciones.includes('Gotero 4') && v8.observaciones.includes('Gotica 4'), 'la nota ya solo dice lo que falta (la gotica)')
+await como(db, SUP, `insert into erp_equivalencias(product_id,producto_id) values($1,$2)`, [P_Y, E_GI])
+v8 = await venta(o8.id)
+bien(await prods(v8.id) === '3× Gotero crecimiento 4oz, 1× Gotica brillo 4oz', 'enlazada la gotica: venta completa')
+bien(!v8.observaciones.includes('Sin equivalencia'), 'ya no queda nota de faltantes')
+bien(v8.observaciones.includes('Pedidos Keraven'), 'lo demás de las observaciones sigue igual')
+await q(`update contratos set estado='rechazado' where id=$1`, [v8.id])
+await como(db, SUP, `update erp_equivalencias set producto_id=$2 where product_id=$1`, [P_Y, E_GO])
+bien(await prods(v8.id) === '3× Gotero crecimiento 4oz, 1× Gotica brillo 4oz', 'una venta rechazada no se toca')
+
+console.log('\n12) Cédula de relleno no pasa al ERP')
+const MAL = await nu('mal@x')
+await q(`insert into profiles(id,tipo,full_name) values($1,'clienta','JINETE')`, [MAL])
+await q(`alter table clients disable trigger trg_cedula_cliente`)
+await q(`insert into clients(profile_id,full_name,telefono_login,cedula) values($1,'JINETE','8496557032','000000000')`, [MAL])
+await q(`alter table clients enable trigger trg_cedula_cliente`)
+const o9 = await pedir(MAL, [{ product_id: P_SH, cantidad: 1 }])
+const c9 = (await q(`select cedula from clientes where id=$1`, [(await venta(o9.id)).cliente_id])).rows[0]
+bien(c9.cedula === null, 'el cliente nuevo del ERP queda sin cédula, no con "000000000"')
 console.log(`\nResultado final: ${ok} bien, ${mal} fallas`)
 if (mal) process.exitCode = 1

@@ -270,7 +270,7 @@ export default function Clients() {
           {campo('phone', 'Teléfono (con este entra)', { required: true, inputMode: 'tel' })}
           {campo('phone2', 'Segundo teléfono (opcional)', { inputMode: 'tel' })}
           {campo('correo', 'Correo (opcional)', { type: 'email' })}
-          {campo('cedula', 'Cédula')}
+          {campo('cedula', 'Cédula (obligatoria, 11 números)', { required: true, inputMode: 'numeric', pattern: '\\D*(\\d\\D*){11}', title: 'La cédula tiene 11 números, por ejemplo 001-1234567-8' })}
           {campo('provincia', 'Provincia')}
           {campo('direccion', 'Dirección', { className: 'border border-gray-200 rounded-lg px-3 py-2 md:col-span-2' })}
           {campo('sector', 'Sector')}

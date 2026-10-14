@@ -15,7 +15,7 @@ await q(`insert into profiles(id,tipo,rol_id,usuario,telefono,full_name) values(
 await q(`insert into profiles(id,tipo,usuario,telefono,full_name) values($1,'personal','almacen','8093','Alma')`, [ALM])
 
 console.log('1) Una persona sin cuenta envía su solicitud')
-const env = (uid) => como(db, uid, `select solicitar_cliente('Ana Perez Gomez','809-111-2233','809-444-5566','001-1','Calle 1','ana@correo.com') id`)
+const env = (uid) => como(db, uid, `select solicitar_cliente('Ana Perez Gomez','809-111-2233','809-444-5566','001-1234567-8','Calle 1','ana@correo.com') id`)
 const r1 = await env(null)   // anon, sin iniciar sesión
 bien(r1.rows[0].id, 'anon puede enviar una solicitud')
 const total = (await q(`select count(*)::int n, estado from solicitudes_cliente group by estado`)).rows
@@ -25,7 +25,7 @@ console.log('\n2) No se duplica ni se cuela basura')
 await falla(() => env(null), 'no deja una segunda solicitud con el mismo correo/teléfono')
 await falla(() => como(db, null, `select solicitar_cliente('Ab','8091112222','','','','x@y.com')`), 'rechaza nombre muy corto')
 await falla(() => como(db, null, `select solicitar_cliente('Pedro Luis','809','','','','p@y.com')`), 'rechaza teléfono corto')
-await falla(() => como(db, null, `select solicitar_cliente('Pedro Luis','8091112233','','','','sin-arroba')`), 'rechaza correo inválido')
+await falla(() => como(db, null, `select solicitar_cliente('Pedro Luis','8091112233','','00112345678','','sin-arroba')`), 'rechaza correo inválido')
 
 console.log('\n3) El buzón solo lo ve el personal con permiso')
 const leer = async (uid) => (await como(db, uid, `select count(*)::int n from solicitudes_cliente`)).rows[0].n

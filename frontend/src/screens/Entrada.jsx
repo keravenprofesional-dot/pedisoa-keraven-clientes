@@ -132,8 +132,8 @@ export default function Entrada({ inicio = 'clienta' }) {
                   placeholder="Otro número (opcional)" className={campo} />
               </div>
               <div>
-                <label className={etiqueta}>Cédula</label>
-                <input inputMode="numeric" value={sol.cedula} onChange={(e) => setSol({ ...sol, cedula: e.target.value })}
+                <label className={etiqueta}>Cédula *</label>
+                <input inputMode="numeric" required value={sol.cedula} onChange={(e) => setSol({ ...sol, cedula: e.target.value })}
                   placeholder="000-0000000-0" className={campo} />
               </div>
               <div>
