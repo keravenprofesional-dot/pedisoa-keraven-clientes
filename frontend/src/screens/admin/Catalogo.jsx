@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Package, Layers, Gift, Boxes, Shuffle, Eye, EyeOff } from 'lucide-react'
+import { Package, Layers, Gift, Boxes, Shuffle, Eye, EyeOff, Link2 } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { useAuth } from '../../context/AuthContext'
 import ListaProductos from './Products'
 import Combos from './Combos'
+import EquivalenciasErp from './EquivalenciasErp'
 
 // Mismo orden que ve el cliente: los conjuntos primero, los sueltos al final.
 const PESTANAS = [
@@ -12,6 +13,7 @@ const PESTANAS = [
   { id: 'duo_pack_mixto', icono: Shuffle, texto: 'Duo Pack Mixto' },
   { id: 'duo_kit', icono: Boxes, texto: 'Duo Kit' },
   { id: 'productos', icono: Package, texto: 'Todos los productos' },
+  { id: 'erp', icono: Link2, texto: 'Enlace con el ERP', permiso: 'productos' },
 ]
 
 export default function Catalogo() {
@@ -71,7 +73,7 @@ export default function Catalogo() {
       <h1 className="text-2xl font-bold text-grafondo mb-3">Catálogo</h1>
 
       <div className="flex gap-2 overflow-x-auto pb-3 mb-4">
-        {PESTANAS.map(({ id, icono: Icono, texto }) => (
+        {PESTANAS.filter((x) => !x.permiso || puede(x.permiso)).map(({ id, icono: Icono, texto }) => (
           <button
             key={id}
             onClick={() => setPestana(id)}
@@ -85,6 +87,7 @@ export default function Catalogo() {
       </div>
 
       {pestana === 'productos' && <ListaProductos />}
+      {pestana === 'erp' && <EquivalenciasErp />}
       {pestana === 'linea' && (
         <Combos tipo="linea" titulo="Línea" ejemplo="Por ejemplo: la Línea de Coco con su shampoo, su tratamiento y su mascarilla." />
       )}

@@ -121,3 +121,17 @@ bien((await como(db, SUP, `select count(*)::int n from erp_equivalencias`)).rows
 
 console.log(`\nResultado: ${ok} bien, ${mal} fallas`)
 if (mal) process.exitCode = 1
+
+console.log('\n10) Lista de productos del ERP para la pantalla de equivalencias')
+await db.exec(fs.readFileSync(new URL('../migrations/20261014070000_equivalencias_erp.sql', import.meta.url), 'utf8'))
+const lista = (await como(db, SUP, `select * from erp_lista_productos()`)).rows
+bien(lista.length === 2 && lista[0].nombre === 'Shampoo Coco 16 oz', 'el personal con permiso ve la lista del ERP')
+let cli = true; try { await como(db, ANA, `select * from erp_lista_productos()`) } catch { cli = false }
+bien(!cli, 'un cliente no puede pedir la lista')
+let vista = true; try { await como(db, ANA, `select * from erp_productos`) } catch { vista = false }
+bien(!vista, 'un cliente ya no puede leer la vista vieja')
+await como(db, SUP, `insert into erp_equivalencias(product_id,producto_id,puesto_por) values($1,$2,$3)`, [P_LI, E_TR, SUP])
+const o7 = await pedir(ANA, [{ product_id: P_LI, cantidad: 1 }])
+bien(await prods((await venta(o7.id)).id) === '1× Tratamiento Coco 10 oz', 'equivalencia puesta desde la pantalla: el pedido ya entra con su producto')
+console.log(`\nResultado final: ${ok} bien, ${mal} fallas`)
+if (mal) process.exitCode = 1
