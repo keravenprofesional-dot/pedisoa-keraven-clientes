@@ -129,7 +129,7 @@ function Cuadro({ c, guardar, setAviso }) {
           <label className="flex aspect-square cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-gray-200 text-center text-gray-400 hover:border-oro hover:text-oroprof">
             <Film size={22} />
             <span className="text-[11px]">{subiendo ? `Subiendo ${subiendo}…` : `Videos (${quedanVideos})`}</span>
-            <input type="file" accept="video/mp4,video/webm,video/quicktime" multiple className="hidden" onChange={(e) => agregar(e, true)} disabled={!!subiendo} />
+            <input type="file" accept="video/*,.mp4,.mov,.m4v,.webm" multiple className="hidden" onChange={(e) => agregar(e, true)} disabled={!!subiendo} />
           </label>
         )}
       </div>

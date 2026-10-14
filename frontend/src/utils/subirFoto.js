@@ -64,21 +64,37 @@ function duracion(archivo) {
 
 // Sube un video corto de promoción (va tal cual, sin achicar) y devuelve su
 // dirección pública.
-export async function subirVideo(archivo) {
-  if (!/^video\/(mp4|webm|quicktime)$/.test(archivo.type)) throw new Error('Ese video debe ser MP4, WEBM o MOV')
-  if (archivo.size > VIDEO_MB * 1024 * 1024) throw new Error(`Ese video pesa más de ${VIDEO_MB} MB`)
-  if ((await duracion(archivo)) > VIDEO_SEGUNDOS + 0.5) throw new Error(`Ese video dura más de ${VIDEO_SEGUNDOS} segundos`)
+// Algunos teléfonos (y Windows con los .mov) no dicen de qué tipo es el
+// archivo: entonces se reconoce por su terminación.
+const TIPO_POR_EXT = { mp4: 'video/mp4', m4v: 'video/mp4', webm: 'video/webm', mov: 'video/quicktime', qt: 'video/quicktime' }
+function tipoDeVideo(archivo) {
+  const t = String(archivo.type || '').toLowerCase()
+  if (t === 'video/mp4' || t === 'video/webm' || t === 'video/quicktime') return t
+  if (t === 'video/x-m4v') return 'video/mp4'
+  const ext = String(archivo.name || '').toLowerCase().split('.').pop()
+  return TIPO_POR_EXT[ext] || null
+}
+const mb = (n) => (n / 1024 / 1024).toFixed(1).replace('.0', '')
 
-  const ext = { 'video/mp4': 'mp4', 'video/webm': 'webm', 'video/quicktime': 'mov' }[archivo.type]
+export async function subirVideo(archivo) {
+  const tipo = tipoDeVideo(archivo)
+  if (!tipo) throw new Error(`ese archivo no es un video MP4, WEBM o MOV (es "${archivo.type || archivo.name.split('.').pop() || 'desconocido'}")`)
+  if (archivo.size > VIDEO_MB * 1024 * 1024) throw new Error(`pesa ${mb(archivo.size)} MB y el máximo es ${VIDEO_MB} MB. Recórtalo o envíalo por WhatsApp a ti mismo para que se achique, y súbelo de nuevo`)
+  const seg = await duracion(archivo)
+  if (seg > VIDEO_SEGUNDOS + 0.5) throw new Error(`dura ${Math.round(seg)} segundos y el máximo es ${VIDEO_SEGUNDOS}. Recórtalo y súbelo de nuevo`)
+
+  const ext = { 'video/mp4': 'mp4', 'video/webm': 'webm', 'video/quicktime': 'mov' }[tipo]
   const nombre = `videos/${crypto.randomUUID()}.${ext}`
   const { error } = await supabase.storage.from('promos').upload(nombre, archivo, {
-    contentType: archivo.type,
+    contentType: tipo,
     cacheControl: '31536000',
   })
   if (error) {
-    throw new Error(/row-level security|not authorized/i.test(error.message)
-      ? 'No tienes permiso para subir videos'
-      : 'No se pudo subir el video. Revisa tu conexión.')
+    const m = String(error.message || '')
+    throw new Error(/row-level security|not authorized|unauthorized/i.test(m) ? 'no tienes permiso para subir videos'
+      : /size|too large|exceed/i.test(m) ? `la nube no acepta videos de más de ${VIDEO_MB} MB`
+      : /mime|type/i.test(m) ? 'la nube no acepta ese formato de video (usa MP4)'
+      : `no se pudo subir (${m || 'se cortó la conexión'}). Si tu internet está lento, prueba con un video más corto`)
   }
   return supabase.storage.from('promos').getPublicUrl(nombre).data.publicUrl
 }
