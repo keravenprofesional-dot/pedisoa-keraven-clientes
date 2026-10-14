@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { Check, Truck } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabaseClient'
-import { formatMoney, formatDate } from '../../utils/format'
+import { formatMoney, formatDate, STATUS_LABELS, colorDe } from '../../utils/format'
 import { caminoDe, puedeConfirmar } from '../../utils/seguimiento'
 
 const horaCorta = (f) =>
@@ -97,7 +97,12 @@ export default function Seguimiento() {
                       {formatDate(o.created_at)}
                     </p>
                   </div>
-                  <span className="font-display text-[19px] tabular-nums text-negro">{formatMoney(o.total)}</span>
+                  <div className="text-right">
+                    <span className="font-display text-[19px] tabular-nums text-negro">{formatMoney(o.total)}</span>
+                    <p className={`mt-1 inline-block rounded-full px-2.5 py-0.5 font-sans text-[10.5px] font-semibold ring-1 ${colorDe(o.status).chip}`}>
+                      {STATUS_LABELS[o.status]}
+                    </p>
+                  </div>
                 </div>
 
                 <div className="filo-oro my-4 opacity-50" />
@@ -107,13 +112,13 @@ export default function Seguimiento() {
                     <li key={e.estado} className="relative flex gap-3.5 pb-5 last:pb-0">
                       {/* La línea que une un paso con el siguiente */}
                       {i < camino.length - 1 && (
-                        <span className={`absolute left-[11px] top-6 h-[calc(100%-1rem)] w-px ${
-                          e.hecha ? 'bg-oro/60' : 'bg-negro/10'
+                        <span className={`absolute left-[11px] top-6 h-[calc(100%-1rem)] w-[2px] ${
+                          e.hecha ? colorDe(e.estado).linea : 'bg-negro/10'
                         }`} />
                       )}
                       <span className={`relative z-10 mt-0.5 grid h-[22px] w-[22px] shrink-0 place-items-center rounded-full ${
-                        e.hecha ? 'bg-oro text-negro'
-                          : e.esAhora ? 'bg-negro text-orosuave ring-4 ring-oro/25'
+                        e.hecha ? `${colorDe(e.estado).punto} text-white`
+                          : e.esAhora ? `${colorDe(e.estado).punto} text-white ring-4 ring-black/10 animate-pulse`
                           : 'border border-negro/15 bg-white'
                       }`}>
                         {e.hecha ? <Check size={12} strokeWidth={2.6} />

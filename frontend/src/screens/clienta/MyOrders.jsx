@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabaseClient'
-import { formatMoney, formatDate, STATUS_LABELS } from '../../utils/format'
+import { formatMoney, formatDate, STATUS_LABELS, colorDe } from '../../utils/format'
 
 export default function MyOrders() {
   const { client } = useAuth()
@@ -43,7 +43,9 @@ export default function MyOrders() {
               </div>
               <div className="text-right">
                 <p className="font-semibold">{formatMoney(o.total)}</p>
-                <p className="text-xs text-dorado font-medium">{STATUS_LABELS[o.status]}</p>
+                <p className={`mt-1 inline-block rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 ${colorDe(o.status).chip}`}>
+                  {STATUS_LABELS[o.status]}
+                </p>
               </div>
             </Link>
           ))}

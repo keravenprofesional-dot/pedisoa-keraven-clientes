@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabaseClient'
 import { useAuth } from '../../context/AuthContext'
-import { formatMoney, formatDate, STATUS_LABELS, STATUS_ORDER } from '../../utils/format'
+import { formatMoney, formatDate, STATUS_LABELS, STATUS_ORDER, colorDe } from '../../utils/format'
 
 const ESTADOS = STATUS_ORDER.concat('cancelado')
 
@@ -54,10 +54,11 @@ export default function OrdersBoard() {
   )
 
   const selectorEstado = (o, clase) => puedeEstado && o.status !== 'cancelado' ? (
-    <select value={o.status} onChange={(e) => changeStatus(o, e.target.value)} className={clase}>
-      {ESTADOS.map((s) => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
+    <select value={o.status} onChange={(e) => changeStatus(o, e.target.value)}
+      className={`${clase.replace('border border-gray-200', '')} font-medium ring-1 ${colorDe(o.status).chip}`}>
+      {ESTADOS.map((s) => <option key={s} value={s} className="bg-white text-grafondo">{STATUS_LABELS[s]}</option>)}
     </select>
-  ) : <span className="text-dorado font-medium">{STATUS_LABELS[o.status] || o.status}</span>
+  ) : <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ${colorDe(o.status).chip}`}>{STATUS_LABELS[o.status] || o.status}</span>
 
   const botonPago = (o) => puedePagos && Number(o.balance) > 0 && o.status !== 'cancelado' && (
     <button onClick={() => pagar(o)} className="text-xs font-semibold text-petroleo border border-gray-200 rounded-lg px-2 py-1">Registrar pago</button>

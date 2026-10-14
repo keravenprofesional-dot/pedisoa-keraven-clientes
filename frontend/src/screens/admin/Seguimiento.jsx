@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { ChevronRight, Check } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { useAuth } from '../../context/AuthContext'
-import { formatMoney, formatDate } from '../../utils/format'
+import { formatMoney, formatDate, colorDe, alertaParado } from '../../utils/format'
 import { ETAPAS, caminoDe, siguienteEtapa } from '../../utils/seguimiento'
 
 const hora = (f) =>
@@ -80,9 +80,13 @@ export default function Seguimiento() {
   return (
     <div className="p-4 md:p-8">
       <h1 className="text-2xl font-bold text-grafondo">Seguimiento</h1>
-      <p className="mb-5 text-sm text-gray-500">
+      <p className="mb-3 text-sm text-gray-500">
         En qué mano está cada pedido. El cliente ve esto mismo desde su teléfono.
       </p>
+      <div className="mb-5 flex flex-wrap gap-x-4 gap-y-1.5 text-[11px] text-gray-500">
+        <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-amber-50 ring-1 ring-amber-300" /> Más de 24 h en la misma etapa</span>
+        <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-red-50 ring-1 ring-red-300" /> Más de 48 h: atrasado</span>
+      </div>
 
       {aviso && <p className="mb-4 rounded-xl border border-gray-200 bg-graclaro p-3 text-sm">{aviso}</p>}
 
@@ -93,14 +97,16 @@ export default function Seguimiento() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {porEtapa.map(({ etapa, lista }) => (
-            <section key={etapa.estado} className="rounded-2xl border border-gray-100 bg-white p-4">
+            <section key={etapa.estado} className={`rounded-2xl border border-t-4 border-gray-100 bg-white p-4 ${colorDe(etapa.estado).borde}`}>
               <div className="mb-3 flex items-baseline justify-between gap-2">
                 <div>
-                  <h2 className="font-semibold text-grafondo">{etapa.titulo}</h2>
+                  <h2 className="flex items-center gap-2 font-semibold text-grafondo">
+                    <span className={`h-2.5 w-2.5 rounded-full ${colorDe(etapa.estado).punto}`} /> {etapa.titulo}
+                  </h2>
                   <p className="text-[11px] uppercase tracking-[0.18em] text-gray-400">{etapa.departamento}</p>
                 </div>
                 <span className={`rounded-full px-2.5 py-0.5 text-sm font-bold tabular-nums ${
-                  lista.length ? 'bg-negro text-oro' : 'bg-graclaro text-gray-400'
+                  lista.length ? `ring-1 ${colorDe(etapa.estado).chip}` : 'bg-graclaro text-gray-400'
                 }`}>
                   {lista.length}
                 </span>
@@ -113,8 +119,9 @@ export default function Seguimiento() {
                   {lista.map((o) => {
                     const sig = siguienteEtapa(o.status)
                     const esDelCliente = sig?.estado === 'entregado'
+                    const alerta = alertaParado(ultimoCambio(o))
                     return (
-                      <li key={o.id} className="rounded-xl border border-gray-100 bg-graclaro/60 p-3">
+                      <li key={o.id} className={`rounded-xl border border-gray-100 p-3 ${alerta ? alerta.clase : 'bg-graclaro/60'}`}>
                         <button
                           onClick={() => setAbierto(abierto === o.id ? null : o.id)}
                           className="flex w-full items-start justify-between gap-2 text-left"
@@ -125,7 +132,10 @@ export default function Seguimiento() {
                               {o.clients?.full_name} · {o.clients?.client_number}
                             </p>
                             <p className="text-[11px] text-gray-400">
-                              {formatMoney(o.total)} · {llevaParado(ultimoCambio(o))}
+                              {formatMoney(o.total)} ·{' '}
+                              <span className={alerta ? `font-semibold ${alerta.texto}` : ''}>
+                                {alerta && '⚠ '}{llevaParado(ultimoCambio(o))}
+                              </span>
                             </p>
                           </div>
                           <ChevronRight
@@ -138,9 +148,9 @@ export default function Seguimiento() {
                           <ol className="mt-3 border-t border-gray-200 pt-2">
                             {caminoDe(o.status, historial[o.id] || []).map((e) => (
                               <li key={e.estado} className="flex items-baseline gap-2 py-0.5 text-xs">
-                                <span className={`w-3 shrink-0 ${e.hecha ? 'text-dorado' : 'text-gray-300'}`}>
-                                  {e.hecha ? '●' : e.esAhora ? '◉' : '○'}
-                                </span>
+                                <span className={`h-2.5 w-2.5 shrink-0 self-center rounded-full ${
+                                  e.hecha || e.esAhora ? colorDe(e.estado).punto : 'border border-gray-300'
+                                } ${e.esAhora ? 'ring-2 ring-black/10' : ''}`} />
                                 <span className={e.esAhora ? 'font-semibold text-grafondo' : e.hecha ? 'text-gray-600' : 'text-gray-300'}>
                                   {e.titulo}
                                 </span>
