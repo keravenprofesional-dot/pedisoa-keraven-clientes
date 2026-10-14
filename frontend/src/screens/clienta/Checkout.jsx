@@ -17,16 +17,16 @@ export default function Checkout() {
   const [addresses, setAddresses] = useState([])
   const [addressId, setAddressId] = useState('')
   const [observaciones, setObservaciones] = useState('')
-  const [paymentMethod, setPaymentMethod] = useState('contado')
-  const [avance, setAvance] = useState('')
+  // El cliente siempre pide de contado. Si Keraven quiere darle crédito a
+  // alguien, eso lo decide el administrador desde su panel (Clientes →
+  // crédito habilitado) — el cliente nunca ve ni elige esa opción aquí.
+  const paymentMethod = 'contado'
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState('')
   const [createdOrder, setCreatedOrder] = useState(null)
 
   const envio = deliveryMethod === 'envio' ? 150 : 0 // ejemplo: costo fijo configurable a futuro
   const total = subtotal + envio
-  const avanceNum = Number(avance || 0)
-  const balance = paymentMethod === 'avance' ? Math.max(total - avanceNum, 0) : paymentMethod === 'credito' ? total : 0
 
   useEffect(() => {
     if (!client) return
@@ -58,7 +58,7 @@ export default function Checkout() {
         delivery_stop_id: deliveryMethod === 'parada' ? stopId : null,
         address_id: deliveryMethod === 'envio' ? addressId : null,
         payment_method: paymentMethod,
-        avance: paymentMethod === 'avance' ? avanceNum : null,
+        avance: null,
         observaciones,
       })
       if (orderErr) throw orderErr
@@ -152,61 +152,8 @@ export default function Checkout() {
           />
 
           <button
-            onClick={() => setStep('pago')}
-            disabled={deliveryMethod === 'parada' ? !stopId : deliveryMethod === 'envio' ? !addressId : false}
-            className="w-full bg-petroleo disabled:bg-gray-300 text-white rounded-xl py-3 font-bold"
-          >
-            Continuar
-          </button>
-        </div>
-      )}
-
-      {step === 'pago' && (
-        <div>
-          <h1 className="text-xl font-bold text-grafondo mb-4">Forma de pago</h1>
-          <div className="flex flex-col gap-2 mb-4">
-            {[
-              { v: 'contado', label: 'Contado (pago total)' },
-              { v: 'avance', label: 'Avance (pagas una parte ahora)', disabled: !client?.credit_enabled },
-              { v: 'credito', label: 'Crédito', disabled: !client?.credit_enabled },
-            ].map((o) => (
-              <button
-                key={o.v}
-                disabled={o.disabled}
-                onClick={() => setPaymentMethod(o.v)}
-                className={`text-left px-4 py-3 rounded-xl border disabled:opacity-40 ${
-                  paymentMethod === o.v ? 'border-dorado bg-dorado/10 font-semibold' : 'border-gray-200'
-                }`}
-              >
-                {o.label}
-              </button>
-            ))}
-          </div>
-
-          {paymentMethod === 'avance' && (
-            <input
-              type="number"
-              min="0"
-              max={total}
-              placeholder="Monto del avance"
-              value={avance}
-              onChange={(e) => setAvance(e.target.value)}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 mb-4"
-            />
-          )}
-
-          <div className="bg-graclaro rounded-xl p-4 mb-4 text-sm">
-            <div className="flex justify-between"><span>Total</span><span className="font-semibold">{formatMoney(total)}</span></div>
-            {paymentMethod !== 'contado' && (
-              <div className="flex justify-between text-petroleo font-semibold">
-                <span>Balance pendiente</span><span>{formatMoney(balance)}</span>
-              </div>
-            )}
-          </div>
-
-          <button
             onClick={() => setStep('confirmar')}
-            disabled={paymentMethod === 'avance' && (avanceNum <= 0 || avanceNum >= total)}
+            disabled={deliveryMethod === 'parada' ? !stopId : deliveryMethod === 'envio' ? !addressId : false}
             className="w-full bg-petroleo disabled:bg-gray-300 text-white rounded-xl py-3 font-bold"
           >
             Continuar
@@ -234,9 +181,6 @@ export default function Checkout() {
             <div className="border-t pt-2 mt-2 flex justify-between font-bold">
               <span>Total</span><span>{formatMoney(total)}</span>
             </div>
-            <p><strong>Forma de pago:</strong> {paymentMethod}</p>
-            {paymentMethod === 'avance' && <p><strong>Avance:</strong> {formatMoney(avanceNum)}</p>}
-            {paymentMethod !== 'contado' && <p><strong>Balance:</strong> {formatMoney(balance)}</p>}
           </div>
 
           {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
