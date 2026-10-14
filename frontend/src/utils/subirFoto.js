@@ -40,9 +40,45 @@ export async function subirFoto(archivo, carpeta = 'productos') {
   return supabase.storage.from('fotos').getPublicUrl(nombre).data.publicUrl
 }
 
-// Borra una foto que ya no se usa (si falla, no pasa nada grave).
+// Borra una foto (o un video de promoción) que ya no se usa. Si falla, no
+// pasa nada grave.
 export async function borrarFoto(url) {
-  const ruta = String(url || '').split('/fotos/')[1]
-  if (!ruta) return
-  await supabase.storage.from('fotos').remove([ruta]).catch(() => {})
+  const m = String(url || '').match(/\/object\/public\/(fotos|promos)\/(.+)$/)
+  if (!m) return
+  await supabase.storage.from(m[1]).remove([m[2]]).catch(() => {})
+}
+
+export const VIDEO_MB = 50
+export const VIDEO_SEGUNDOS = 60
+export const esVideo = (url) => /\.(mp4|webm|mov|m4v)(\?|$)/i.test(String(url || ''))
+
+function duracion(archivo) {
+  return new Promise((resolve) => {
+    const v = document.createElement('video')
+    v.preload = 'metadata'
+    v.onloadedmetadata = () => { URL.revokeObjectURL(v.src); resolve(v.duration) }
+    v.onerror = () => resolve(0)
+    v.src = URL.createObjectURL(archivo)
+  })
+}
+
+// Sube un video corto de promoción (va tal cual, sin achicar) y devuelve su
+// dirección pública.
+export async function subirVideo(archivo) {
+  if (!/^video\/(mp4|webm|quicktime)$/.test(archivo.type)) throw new Error('Ese video debe ser MP4, WEBM o MOV')
+  if (archivo.size > VIDEO_MB * 1024 * 1024) throw new Error(`Ese video pesa más de ${VIDEO_MB} MB`)
+  if ((await duracion(archivo)) > VIDEO_SEGUNDOS + 0.5) throw new Error(`Ese video dura más de ${VIDEO_SEGUNDOS} segundos`)
+
+  const ext = { 'video/mp4': 'mp4', 'video/webm': 'webm', 'video/quicktime': 'mov' }[archivo.type]
+  const nombre = `videos/${crypto.randomUUID()}.${ext}`
+  const { error } = await supabase.storage.from('promos').upload(nombre, archivo, {
+    contentType: archivo.type,
+    cacheControl: '31536000',
+  })
+  if (error) {
+    throw new Error(/row-level security|not authorized/i.test(error.message)
+      ? 'No tienes permiso para subir videos'
+      : 'No se pudo subir el video. Revisa tu conexión.')
+  }
+  return supabase.storage.from('promos').getPublicUrl(nombre).data.publicUrl
 }

@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabaseClient'
 import { formatMoney } from '../../utils/format'
 import logo from '../../assets/logo.jpg'
+import CarruselPromo from '../../components/CarruselPromo'
 
 // Cada tarjeta lleva a un sitio distinto. La última no es una pantalla:
 // marca el teléfono de Keraven.
@@ -24,6 +25,15 @@ export default function Home() {
   const nombre = client?.full_name?.split(' ')[0]
   const [instagram, setInstagram] = useState('')
   const [telefono, setTelefono] = useState('')
+  const [promos, setPromos] = useState([])
+
+  useEffect(() => {
+    // Los cuadros de promoción encendidos y con fotos: temporada primero.
+    supabase.from('promociones').select('tipo, titulo, fotos').eq('activo', true)
+      .then(({ data }) => setPromos((data || [])
+        .filter((p) => Array.isArray(p.fotos) && p.fotos.length > 0)
+        .sort((a, b) => (a.tipo === 'temporada' ? 0 : 1) - (b.tipo === 'temporada' ? 0 : 1))))
+  }, [])
 
   useEffect(() => {
     supabase.from('company_settings').select('instagram, whatsapp, telefono').maybeSingle()
@@ -65,6 +75,19 @@ export default function Home() {
           </div>
         )}
       </header>
+
+      {promos.length > 0 && (
+        <div className={`mb-6 grid gap-3 ${promos.length > 1 ? 'md:grid-cols-2' : ''}`}>
+          {promos.map((p) => (
+            <CarruselPromo
+              key={p.tipo}
+              fotos={p.fotos}
+              titulo={p.titulo || (p.tipo === 'temporada' ? 'Promociones de temporada' : 'Ofertas del mes')}
+              etiqueta={p.tipo === 'temporada' ? 'Temporada' : 'Este mes'}
+            />
+          ))}
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-3">
         {opciones.map(({ to, icon: Icono, label, sub, destacado, llamar }, i) => {
