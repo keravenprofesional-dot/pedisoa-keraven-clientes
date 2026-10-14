@@ -128,7 +128,7 @@ const guardar = (k, v) => {
   try { localStorage.setItem(k, v) } catch { /* navegador sin memoria */ }
 }
 
-const Contexto = createContext({ hay: false, sonando: false, alternar: () => {} })
+const Contexto = createContext({ hay: false, sonando: false, alternar: () => {}, cederAlVideo: () => {}, alPonerMusica: { current: null } })
 export const useMusica = () => useContext(Contexto)
 
 export function MusicaProvider({ children }) {
@@ -141,6 +141,20 @@ export function MusicaProvider({ children }) {
   const decidio = useRef(false) // ¿el cliente ya tocó el botón él mismo?
   const [hay, setHay] = useState(false)
   const [sonando, setSonando] = useState(false)
+  // Un video de promoción con su sonido puesto le pide la palabra a la
+  // música: ella se calla mientras tanto y vuelve sola cuando el video se
+  // calla. No cambia lo que el cliente eligió (encendida sigue encendida).
+  const cedida = useRef(false)
+  const alPonerMusica = useRef(null) // el video se calla si el cliente pone la música a mano
+  const sonandoRef = useRef(false)
+  useEffect(() => { sonandoRef.current = sonando }, [sonando])
+  function cederAlVideo(si) {
+    if (si === cedida.current) return
+    cedida.current = si
+    if (si) { audio.current?.pause(); return }
+    // Vuelve donde va la emisora ahora, no donde se quedó
+    if (sonandoRef.current) encender().catch(() => {})
+  }
 
   useEffect(() => {
     // ¿Existen las pistas? Si no, ni se muestra el botón.
@@ -174,6 +188,7 @@ export function MusicaProvider({ children }) {
       // Se vuelve a preguntar: en diez segundos el cliente pudo apagarla o
       // irse. Si decidió algo, su decisión manda.
       if (!debeArrancar({ hay, recuerdo: leer(RECUERDO, 'si'), desmontado, decidioElCliente: decidio.current })) return
+      if (cedida.current) { setSonando(true); return } // un video está hablando: la música espera su turno
       encender().catch(() => {
         const alTocar = () => {
           if (!desmontado && !decidio.current) encender().catch(() => {})
@@ -252,6 +267,7 @@ export function MusicaProvider({ children }) {
       // una duración quemada no coincide con el mp3 real) se vuelve a
       // sintonizar, y así la emisora se endereza sola.
       audio.current.addEventListener('ended', () => {
+        if (cedida.current) return
         const siguiente = (pista.current + 1) % PISTAS.length
         const ahora = sintonia()
         if (ahora.indice === siguiente && ahora.segundo < 10) ponerPista(siguiente, 0)
@@ -292,13 +308,15 @@ export function MusicaProvider({ children }) {
     } else {
       // Aquí no se espera nada: tocó el botón a propósito y ya tocó la
       // pantalla, así que el navegador deja sonar al instante.
+      // Si un video estaba sonando, se calla: manda la música que pidió.
+      if (cedida.current) { cedida.current = false; alPonerMusica.current?.() }
       encender().then(() => guardar(RECUERDO, 'si')).catch(() => setSonando(false))
     }
   }
 
   useEffect(() => () => { cancelarEspera(); audio.current?.pause() }, [])
 
-  return <Contexto.Provider value={{ hay, sonando, alternar }}>{children}</Contexto.Provider>
+  return <Contexto.Provider value={{ hay, sonando, alternar, cederAlVideo, alPonerMusica }}>{children}</Contexto.Provider>
 }
 
 // El botón. `variante="nav"` lo dibuja como un renglón más de la barra de
