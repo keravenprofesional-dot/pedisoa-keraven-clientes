@@ -6,7 +6,7 @@ const db = await nuevaBase()
 await db.exec(fs.readFileSync('C:/Keraven-Systems-Masters/schema.sql', 'utf8'))
 // Con las tablas del ERP ya puestas, se vuelven a pasar las migraciones del puente
 // (en la base real el ERP ya existía cuando se aplicaron)
-for (const m of ['20261014060000_puente_con_systems_masters.sql', '20261014090000_erp_completar_productos.sql'])
+for (const m of ['20261014060000_puente_con_systems_masters.sql', '20261014090000_erp_completar_productos.sql', '20261014100000_cancelar_siempre_devuelve.sql'])
   await db.exec(fs.readFileSync(new URL('../migrations/' + m, import.meta.url), 'utf8'))
 const q = (s, p) => db.query(s, p)
 let ok = 0, mal = 0
@@ -171,5 +171,15 @@ await q(`alter table clients enable trigger trg_cedula_cliente`)
 const o9 = await pedir(MAL, [{ product_id: P_SH, cantidad: 1 }])
 const c9 = (await q(`select cedula from clientes where id=$1`, [(await venta(o9.id)).cliente_id])).rows[0]
 bien(c9.cedula === null, 'el cliente nuevo del ERP queda sin cédula, no con "000000000"')
+console.log(`\nResultado final: ${ok} bien, ${mal} fallas`)
+if (mal) process.exitCode = 1
+
+console.log('\n13) Cancelado desde el ERP: el stock y la deuda vuelven')
+const P_S = (await q(`insert into products(nombre,precio,stock) values('Con stock',100,10) returning id`)).rows[0].id
+const o10 = await pedir(BEA, [{ product_id: P_S, cantidad: 3 }])
+const st = async () => (await q(`select stock from products where id=$1`, [P_S])).rows[0].stock
+bien(await st() === 7, 'pedir 3 baja el stock a 7')
+await q(`update contratos set estado='rechazado' where id=$1`, [(await venta(o10.id)).id])
+bien((await q(`select status from orders where id=$1`, [o10.id])).rows[0].status === 'cancelado' && await st() === 10, 'rechazado en el Buzón: pedido cancelado y el stock vuelve a 10')
 console.log(`\nResultado final: ${ok} bien, ${mal} fallas`)
 if (mal) process.exitCode = 1
