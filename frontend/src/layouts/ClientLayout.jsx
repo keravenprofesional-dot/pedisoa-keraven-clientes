@@ -1,12 +1,20 @@
+import { useEffect } from 'react'
 import { Outlet } from 'react-router-dom'
 import { LogOut } from 'lucide-react'
 import BottomNav from '../components/BottomNav'
 import BotonVolver from '../components/BotonVolver'
 import { MusicaProvider, BotonMusica } from '../components/MusicaFondo'
 import { useAuth } from '../context/AuthContext'
+import { supabase } from '../lib/supabaseClient'
 
 export default function ClientLayout() {
   const { client, signOut } = useAuth()
+
+  // Cuenta la visita para el tablero del administrador. La base ya ignora
+  // las repetidas dentro de 30 minutos; si falla, el cliente ni se entera.
+  useEffect(() => {
+    if (client?.id) supabase.rpc('registrar_visita').then(() => {}, () => {})
+  }, [client?.id])
 
   function salir() {
     if (confirm('¿Cerrar sesión? Tendrás que entrar otra vez con tu código.')) signOut()

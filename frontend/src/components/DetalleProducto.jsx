@@ -1,11 +1,17 @@
 import { useEffect } from 'react'
 import { X, Plus, Check } from 'lucide-react'
 import { formatMoney } from '../utils/format'
+import { supabase } from '../lib/supabaseClient'
 
 // Lo que ve el cliente al tocar un producto. Para una línea, un Duo Pack o un
 // Duo Kit lo importante es el listado de adentro: nadie compra una caja de
 // RD$4,900 sin saber qué trae.
 export default function DetalleProducto({ producto, contenido = [], alCerrar, alAgregar }) {
+  // Cuenta la vista del producto (para "los más vistos" del administrador).
+  useEffect(() => {
+    if (producto?.id) supabase.rpc('registrar_visita', { p_producto: producto.id }).then(() => {}, () => {})
+  }, [producto?.id])
+
   useEffect(() => {
     const tecla = (e) => e.key === 'Escape' && alCerrar()
     window.addEventListener('keydown', tecla)

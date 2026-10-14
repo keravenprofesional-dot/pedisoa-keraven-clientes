@@ -1,10 +1,11 @@
-import { LayoutDashboard, Package, Users, ShoppingCart, Truck, Settings, UserCog, KeyRound, Route, Inbox, Megaphone } from 'lucide-react'
+import { LayoutDashboard, Package, Users, ShoppingCart, Truck, Settings, UserCog, KeyRound, Route, Inbox, Megaphone, BarChart3 } from 'lucide-react'
 
 // Pantallas del panel y qué hace falta para verlas.
 //   permiso: alguno de estos (lista) basta
 //   supremo: solo el supremo usuario
 export const MENU_ADMIN = [
   { to: '/admin/resumen', icon: LayoutDashboard, label: 'Resumen', permiso: ['ver_resumen'] },
+  { to: '/admin/estadisticas', icon: BarChart3, label: 'Estadísticas', permiso: ['ver_resumen'] },
   { to: '/admin/pedidos', icon: ShoppingCart, label: 'Pedidos', permiso: ['ver_pedidos'] },
   { to: '/admin/seguimiento', icon: Route, label: 'Seguimiento', permiso: ['ver_pedidos', 'despacho', 'cambiar_estado'] },
   { to: '/admin/despacho', icon: Truck, label: 'Despacho', permiso: ['despacho'] },
