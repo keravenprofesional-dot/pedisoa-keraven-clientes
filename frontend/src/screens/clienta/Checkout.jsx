@@ -26,7 +26,15 @@ export default function Checkout() {
   const [createdOrder, setCreatedOrder] = useState(null)
 
   const envio = deliveryMethod === 'envio' ? 150 : 0 // ejemplo: costo fijo configurable a futuro
-  const total = subtotal + envio
+  // El % fijo que el administrador le dio (la base lo vuelve a calcular igual).
+  const [miDescuento, setMiDescuento] = useState(0)
+  useEffect(() => {
+    if (!client?.id) return
+    supabase.from('descuentos_cliente').select('porcentaje').eq('client_id', client.id).maybeSingle()
+      .then(({ data }) => setMiDescuento(Number(data?.porcentaje || 0)))
+  }, [client?.id])
+  const descuento = Math.round(subtotal * miDescuento) / 100
+  const total = subtotal + envio - descuento
 
   useEffect(() => {
     if (!client) return
@@ -178,6 +186,17 @@ export default function Checkout() {
                 </div>
               ))}
             </div>
+            {(descuento > 0 || envio > 0) && (
+              <div className="border-t pt-2 mt-2 space-y-1 text-gray-600">
+                <div className="flex justify-between"><span>Subtotal</span><span>{formatMoney(subtotal)}</span></div>
+                {descuento > 0 && (
+                  <div className="flex justify-between font-semibold text-green-700">
+                    <span>Tu descuento ({miDescuento}%)</span><span>−{formatMoney(descuento)}</span>
+                  </div>
+                )}
+                {envio > 0 && <div className="flex justify-between"><span>Envío</span><span>{formatMoney(envio)}</span></div>}
+              </div>
+            )}
             <div className="border-t pt-2 mt-2 flex justify-between font-bold">
               <span>Total</span><span>{formatMoney(total)}</span>
             </div>

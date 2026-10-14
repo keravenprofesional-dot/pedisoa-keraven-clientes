@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Percent } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { useAuth } from '../../context/AuthContext'
 import { formatMoney, formatDate, STATUS_LABELS, STATUS_ORDER, colorDe } from '../../utils/format'
@@ -9,6 +10,7 @@ export default function OrdersBoard() {
   const { puede } = useAuth()
   const puedeEstado = puede('cambiar_estado')
   const puedePagos = puede('registrar_pagos')
+  const puedeDescuentos = puede('dar_descuentos')
   const [orders, setOrders] = useState([])
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -44,6 +46,27 @@ export default function OrdersBoard() {
     load()
   }
 
+  // Pone (o cambia, o quita con 0) el descuento de un pedido puntual.
+  async function descontar(o) {
+    const txt = prompt(
+      `Descuento para ${o.order_number} (subtotal ${formatMoney(o.subtotal)}` +
+      `${Number(o.descuento) > 0 ? `, ahora tiene ${formatMoney(o.descuento)}` : ''}).\n` +
+      'Monto en RD$ (0 para quitarlo):',
+      Number(o.descuento) > 0 ? String(Number(o.descuento)) : '')
+    if (txt === null) return
+    const monto = Number(String(txt).replace(/[^\d.]/g, '') || 0)
+    let motivo = ''
+    if (monto > 0) {
+      motivo = prompt('Motivo del descuento:', o.descuento_nota || '')
+      if (motivo === null) return
+    }
+    const { error } = await supabase.rpc('descontar_pedido', { p_order_id: o.id, p_monto: monto, p_motivo: motivo })
+    setAviso(error ? error.message : monto > 0
+      ? `${o.order_number}: descuento de ${formatMoney(monto)} aplicado.`
+      : `${o.order_number}: descuento quitado.`)
+    load()
+  }
+
   const q = search.toLowerCase()
   const filtered = orders.filter((o) =>
     (statusFilter === 'all' || o.status === statusFilter) &&
@@ -60,8 +83,28 @@ export default function OrdersBoard() {
     </select>
   ) : <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ${colorDe(o.status).chip}`}>{STATUS_LABELS[o.status] || o.status}</span>
 
-  const botonPago = (o) => puedePagos && Number(o.balance) > 0 && o.status !== 'cancelado' && (
-    <button onClick={() => pagar(o)} className="text-xs font-semibold text-petroleo border border-gray-200 rounded-lg px-2 py-1">Registrar pago</button>
+  const botonPago = (o) => (
+    <div className="flex flex-wrap justify-end gap-1.5">
+      {puedePagos && Number(o.balance) > 0 && o.status !== 'cancelado' && (
+        <button onClick={() => pagar(o)} className="text-xs font-semibold text-petroleo border border-gray-200 rounded-lg px-2 py-1">Registrar pago</button>
+      )}
+      {puedeDescuentos && !['cancelado', 'entregado'].includes(o.status) && (
+        <button onClick={() => descontar(o)} title="Dar descuento a este pedido"
+          className="flex items-center gap-1 text-xs font-semibold text-amber-700 border border-amber-200 rounded-lg px-2 py-1">
+          <Percent size={12} /> Descuento
+        </button>
+      )}
+    </div>
+  )
+  const totalCon = (o) => (
+    <>
+      {formatMoney(o.total)}
+      {Number(o.descuento) > 0 && (
+        <span className="block text-[11px] text-amber-700" title={o.descuento_nota || ''}>
+          −{formatMoney(o.descuento)} desc.
+        </span>
+      )}
+    </>
   )
 
   return (
@@ -91,7 +134,7 @@ export default function OrdersBoard() {
                 <td className="p-3 font-bold text-petroleo">{o.order_number}</td>
                 <td className="p-3">{o.clients?.full_name} <span className="text-xs text-gray-400">{o.clients?.client_number}</span></td>
                 <td className="p-3">{formatDate(o.created_at)}</td>
-                <td className="p-3">{formatMoney(o.total)}</td>
+                <td className="p-3">{totalCon(o)}</td>
                 <td className="p-3">{Number(o.balance) > 0 ? <span className="text-red-500">{formatMoney(o.balance)}</span> : '—'}</td>
                 <td className="p-3">{selectorEstado(o, 'border border-gray-200 rounded-lg px-2 py-1')}</td>
                 <td className="p-3">{botonPago(o)}</td>
@@ -106,7 +149,7 @@ export default function OrdersBoard() {
           <div key={o.id} className="bg-white border border-gray-100 rounded-xl p-4">
             <div className="flex justify-between mb-1">
               <span className="font-bold text-petroleo">{o.order_number}</span>
-              <span className="font-semibold">{formatMoney(o.total)}</span>
+              <span className="text-right font-semibold">{totalCon(o)}</span>
             </div>
             <p className="text-sm text-gray-500 mb-1">{o.clients?.full_name} · {formatDate(o.created_at)}</p>
             {Number(o.balance) > 0 && <p className="text-sm text-red-500 mb-2">Debe {formatMoney(o.balance)}</p>}

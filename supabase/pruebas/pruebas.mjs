@@ -58,7 +58,7 @@ bien((await como(db, MAN, `update company_settings set telefono='x'`)).affectedR
 bien((await como(db, MAN, `update products set precio=1`)).affectedRows === 0, 'NO cambia precios');
 
 console.log('3) Supremo');
-bien((await como(db, SUP, `select * from mis_permisos()`)).rows.length === 12, 'tiene los 12 permisos');
+bien((await como(db, SUP, `select * from mis_permisos()`)).rows.length === 13, 'tiene los 13 permisos');
 const rn = (await como(db, SUP, `insert into pedidos_roles(nombre) values('Despacho') returning id`)).rows[0].id;
 await como(db, SUP, `insert into pedidos_rol_permisos values($1,'despacho'),($1,'ver_pedidos')`, [rn]);
 bien(true, 'crea un rol nuevo con sus permisos');

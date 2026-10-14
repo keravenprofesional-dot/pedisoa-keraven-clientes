@@ -38,7 +38,8 @@ export default function Solicitudes() {
   // Llevar los datos de la solicitud al formulario de nuevo cliente.
   function crearCliente(s) {
     const datos = {
-      full_name: s.nombre_completo, telefono_login: s.telefono,
+      solicitud_id: s.id,
+      full_name: s.nombre_completo, telefono_login: s.telefono, telefono_referencia: s.telefono_referencia || '',
       cedula: s.cedula || '', direccion: s.direccion || '', correo: s.correo || '',
     }
     try { sessionStorage.setItem('prefill_cliente', JSON.stringify(datos)) } catch (e) { /* sin memoria */ }

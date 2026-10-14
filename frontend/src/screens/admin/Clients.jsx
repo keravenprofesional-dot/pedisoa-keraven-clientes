@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Copy, Check, UserPlus, KeyRound, Pencil, UserX, UserCheck, MapPin, Plus, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
+import { Copy, Check, UserPlus, KeyRound, Pencil, UserX, UserCheck, MapPin, Plus, Trash2, ChevronDown, ChevronUp, Percent } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { adminUsuarios } from '../../lib/adminUsuarios'
 import { useAuth } from '../../context/AuthContext'
@@ -21,8 +21,12 @@ export default function Clients() {
   const puedeCrear = puede('crear_clientas')
   const puedeEditar = puede('editar_clientas')
   const puedeParadas = puede('configuracion')
+  const puedeDescuentos = puede('dar_descuentos')
 
   const [clients, setClients] = useState([])
+  const [descuentos, setDescuentos] = useState({}) // client_id → { porcentaje, motivo }
+  const [desc, setDesc] = useState({ porcentaje: '', motivo: '' })
+  const [solicitudId, setSolicitudId] = useState(null) // si viene del buzón de Solicitudes
   const [paradas, setParadas] = useState([])
   const [verParadas, setVerParadas] = useState(false)
   const [nuevaParada, setNuevaParada] = useState(paradaVacia)
@@ -36,15 +40,55 @@ export default function Clients() {
 
   useEffect(() => { load() }, [])
 
+  // "Crear cliente" desde el buzón de Solicitudes: abre el formulario ya lleno.
+  useEffect(() => {
+    if (!window.location.hash.includes('nuevo=1')) return
+    let datos = null
+    try { datos = JSON.parse(sessionStorage.getItem('prefill_cliente') || 'null') } catch { /* nada */ }
+    try { sessionStorage.removeItem('prefill_cliente') } catch { /* nada */ }
+    if (!datos) return
+    setError('')
+    setForm({
+      ...vacio,
+      full_name: datos.full_name || '', phone: datos.telefono_login || '', phone2: datos.telefono_referencia || '',
+      cedula: datos.cedula || '', direccion: datos.direccion || '', correo: datos.correo || '',
+    })
+    setSolicitudId(datos.solicitud_id || null)
+    setEditando('nueva')
+  }, [])
+
   async function load() {
-    const [{ data }, { data: p }] = await Promise.all([
+    const [{ data }, { data: p }, { data: d }] = await Promise.all([
       supabase.from('clients')
         .select('*, client_phones(phone, is_primary), profiles!clients_profile_id_fkey(active), delivery_stops(nombre, zona)')
         .order('full_name'),
       supabase.from('delivery_stops').select('*').order('zona').order('nombre'),
+      supabase.from('descuentos_cliente').select('client_id, porcentaje, motivo'),
     ])
     setClients(data || [])
     setParadas(p || [])
+    setDescuentos(Object.fromEntries((d || []).map((x) => [x.client_id, x])))
+  }
+
+  // Guarda (o quita, si queda vacío o en 0) el % fijo del cliente.
+  async function guardarDescuento(clientId) {
+    const pct = Number(desc.porcentaje || 0)
+    const antes = descuentos[clientId]
+    if (!pct) {
+      if (antes) {
+        const { error: err } = await supabase.from('descuentos_cliente').delete().eq('client_id', clientId)
+        if (err) throw new Error('No se pudo quitar el descuento')
+      }
+      return
+    }
+    if (pct < 0 || pct > 50) throw new Error('El descuento debe estar entre 1% y 50%')
+    if (antes && Number(antes.porcentaje) === pct && (antes.motivo || '') === desc.motivo) return
+    const { data: { user } } = await supabase.auth.getUser()
+    const { error: err } = await supabase.from('descuentos_cliente').upsert({
+      client_id: clientId, porcentaje: pct, motivo: desc.motivo.trim() || null,
+      puesto_por: user?.id, actualizado_en: new Date().toISOString(),
+    })
+    if (err) throw new Error('No se pudo guardar el descuento')
   }
 
   // ── Paradas de la ruta (aquí, porque es donde se usan al dar de alta) ──
@@ -76,7 +120,10 @@ export default function Clients() {
 
   function abrir(c) {
     setError('')
-    if (c === 'nueva') { setForm(vacio); setEditando('nueva'); return }
+    setSolicitudId(null)
+    if (c === 'nueva') { setForm(vacio); setDesc({ porcentaje: '', motivo: '' }); setEditando('nueva'); return }
+    const d = descuentos[c.id]
+    setDesc({ porcentaje: d ? String(Number(d.porcentaje)) : '', motivo: d?.motivo || '' })
     const tel2 = c.client_phones?.find((p) => !p.is_primary)?.phone || ''
     setForm({
       ...vacio, ...Object.fromEntries(Object.keys(vacio).map((k) => [k, c[k] ?? vacio[k]])),
@@ -93,8 +140,17 @@ export default function Clients() {
       if (editando === 'nueva') {
         const r = await adminUsuarios('crear_clienta', datos)
         setCodigo({ full_name: form.full_name, access_code: r.access_code, telefono: form.phone })
+        // Si vino del buzón, la solicitud queda aprobada sola.
+        if (solicitudId) {
+          await supabase.rpc('atender_solicitud', {
+            p_id: solicitudId, p_estado: 'aprobada',
+            p_nota: `Cliente creado${r.client?.client_number ? `: ${r.client.client_number}` : ''}`,
+          })
+          setSolicitudId(null)
+        }
       } else {
         await adminUsuarios('editar_clienta', { ...datos, client_id: editando.id })
+        if (puedeDescuentos) await guardarDescuento(editando.id)
       }
       setEditando(null)
       load()
@@ -205,6 +261,11 @@ export default function Clients() {
       {editando && (
         <form onSubmit={guardar} className="bg-white border border-gray-100 rounded-2xl p-4 mb-6 grid grid-cols-1 md:grid-cols-3 gap-3">
           <h2 className="md:col-span-3 font-semibold">{editando === 'nueva' ? 'Nuevo cliente' : `Editar ${editando.client_number}`}</h2>
+          {solicitudId && (
+            <p className="md:col-span-3 -mt-1 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              Datos traídos de su solicitud. Revísalos, elige su parada y crea el cliente: la solicitud quedará aprobada.
+            </p>
+          )}
           {campo('full_name', 'Nombre completo', { required: true })}
           {campo('phone', 'Teléfono (con este entra)', { required: true, inputMode: 'tel' })}
           {campo('phone2', 'Segundo teléfono (opcional)', { inputMode: 'tel' })}
@@ -235,6 +296,19 @@ export default function Clients() {
                 <input type="number" min="0" value={form.credit_limit} onChange={(e) => setForm({ ...form, credit_limit: e.target.value })} className="ml-2 border border-gray-200 rounded-lg px-3 py-1 w-36" />
               </label>
             </>
+          )}
+          {puedeDescuentos && editando !== 'nueva' && (
+            <div className="md:col-span-3 grid grid-cols-1 gap-2 rounded-xl border border-amber-200 bg-amber-50/60 p-3 md:grid-cols-[auto_1fr]">
+              <label className="flex items-center gap-2 text-sm font-semibold text-amber-900">
+                <Percent size={15} /> Descuento fijo
+                <input type="number" min="0" max="50" step="0.5" value={desc.porcentaje} placeholder="0"
+                  onChange={(e) => setDesc({ ...desc, porcentaje: e.target.value })}
+                  className="w-20 rounded-lg border border-amber-200 bg-white px-2 py-1 text-right font-normal" /> %
+              </label>
+              <input value={desc.motivo} onChange={(e) => setDesc({ ...desc, motivo: e.target.value })}
+                placeholder="Motivo (ej. cliente mayorista)" className="rounded-lg border border-amber-200 bg-white px-3 py-1.5 text-sm" />
+              <p className="text-[11px] text-amber-800 md:col-span-2">Se aplica solo en cada pedido nuevo de este cliente. Déjalo en 0 para quitarlo.</p>
+            </div>
           )}
           {error && <p className="text-red-500 text-sm md:col-span-3">{error}</p>}
           <div className="md:col-span-3 flex gap-2">
@@ -275,6 +349,11 @@ export default function Clients() {
                   <td className="p-3">
                     {c.full_name}
                     {!activa && <span className="text-xs text-red-500"> · Sin acceso</span>}
+                    {descuentos[c.id] && (
+                      <span className="ml-1.5 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
+                        {Number(descuentos[c.id].porcentaje)}% desc.
+                      </span>
+                    )}
                     {c.correo && <div className="text-xs text-gray-400">{c.correo}</div>}
                   </td>
                   <td className="p-3 whitespace-nowrap">{c.telefono_login}</td>
@@ -312,7 +391,10 @@ export default function Clients() {
           return (
             <div key={c.id} className={`p-3 even:bg-pastel/50 ${activa ? '' : 'opacity-50'}`}>
               <div className="flex justify-between gap-2">
-                <span className="font-semibold">{c.full_name}</span>
+                <span className="font-semibold">
+                  {c.full_name}
+                  {descuentos[c.id] && <span className="ml-1.5 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] text-amber-800">{Number(descuentos[c.id].porcentaje)}%</span>}
+                </span>
                 <span className="text-xs font-bold text-petroleo whitespace-nowrap">{c.client_number}</span>
               </div>
               <p className="text-sm text-gray-500">

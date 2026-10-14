@@ -27,7 +27,7 @@ bien((await perms(MAN)).includes('crear_clientas'), 'Manuel la conserva')
 
 // Y que de verdad se aplique, no solo en la lista
 const { rows: r1 } = await como(db, LET, `select count(*)::int n from pedidos_permisos`)
-bien(r1[0].n === 12, 'Leticia sigue entrando normal')
+bien(r1[0].n === 13, 'Leticia sigue entrando normal')
 await como(db, SUP, `delete from pedidos_usuario_permisos where profile_id=$1 and permiso='crear_clientas'`, [LET])
 bien((await perms(LET)).includes('crear_clientas'), 'al borrar lo propio vuelve a mandar su rol')
 
@@ -36,5 +36,5 @@ let negado = false
 try { await como(db, MAN, `insert into pedidos_usuario_permisos values($1,'productos',true)`, [MAN]) } catch { negado = true }
 const tras = await perms(MAN)
 bien(negado || !tras.includes('productos'), 'Manuel NO puede darse permisos a sí mismo')
-bien((await perms(SUP)).length === 12, 'el supremo mantiene los 12')
+bien((await perms(SUP)).length === 13, 'el supremo mantiene los 13')
 console.log(`\nResultado: ${ok} bien, ${mal} fallas`)

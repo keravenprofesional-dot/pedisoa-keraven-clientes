@@ -55,7 +55,12 @@ export default function OrderDetail() {
 
         <div className="text-sm space-y-1">
           <div className="flex justify-between"><span>Subtotal</span><span>{formatMoney(order.subtotal)}</span></div>
-          <div className="flex justify-between"><span>Descuento</span><span>{formatMoney(order.descuento)}</span></div>
+          {Number(order.descuento) > 0 && (
+            <div className="flex justify-between font-semibold text-green-700">
+              <span>Descuento{order.descuento_nota ? ` · ${order.descuento_nota}` : ''}</span>
+              <span>−{formatMoney(order.descuento)}</span>
+            </div>
+          )}
           <div className="flex justify-between"><span>Envío</span><span>{formatMoney(order.envio)}</span></div>
           <div className="flex justify-between font-bold text-base border-t pt-1 mt-1">
             <span>TOTAL</span><span>{formatMoney(order.total)}</span>
