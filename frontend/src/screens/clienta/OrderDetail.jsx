@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabaseClient'
 import { formatMoney, formatDate } from '../../utils/format'
 import StatusTracker from '../../components/StatusTracker'
+import PagoPedido from '../../components/PagoPedido'
 
 export default function OrderDetail() {
   const { id } = useParams()
@@ -87,6 +88,8 @@ export default function OrderDetail() {
           </div>
         )}
       </div>
+
+      <PagoPedido order={order} cuentas={bankAccounts} />
 
       <button onClick={() => window.print()} className="w-full bg-petroleo text-white rounded-xl py-3 font-bold mb-6">
         Descargar / Imprimir recibo

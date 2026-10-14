@@ -34,11 +34,13 @@ const SeguimientoAdmin = lazy(() => import('./screens/admin/Seguimiento'))
 const Solicitudes = lazy(() => import('./screens/admin/Solicitudes'))
 const Promociones = lazy(() => import('./screens/admin/Promociones'))
 const Estadisticas = lazy(() => import('./screens/admin/Estadisticas'))
+const Pagos = lazy(() => import('./screens/admin/Pagos'))
 
 const PANTALLAS = {
   '/admin/resumen': Dashboard,
   '/admin/estadisticas': Estadisticas,
   '/admin/pedidos': OrdersBoard,
+  '/admin/pagos': Pagos,
   '/admin/seguimiento': SeguimientoAdmin,
   '/admin/despacho': Dispatch,
   '/admin/clientas': Clients,

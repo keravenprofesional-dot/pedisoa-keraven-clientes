@@ -15,15 +15,28 @@ export default function OrdersBoard() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [aviso, setAviso] = useState('')
+  const [pagos, setPagos] = useState({})   // order_id → { confirmado, revision }
+  const [cuentas, setCuentas] = useState([])
 
   useEffect(() => { load() }, [])
 
   async function load() {
-    const { data } = await supabase
-      .from('orders')
-      .select('*, clients(full_name, client_number, telefono_login)')
-      .order('created_at', { ascending: false })
+    const [{ data }, { data: pr }, { data: cts }] = await Promise.all([
+      supabase.from('orders')
+        .select('*, clients(full_name, client_number, telefono_login)')
+        .order('created_at', { ascending: false }),
+      supabase.from('pagos_reportados').select('order_id, monto, estado').neq('estado', 'rechazado'),
+      supabase.from('bank_accounts').select('id, banco, tipo_cuenta, numero').eq('activo', true),
+    ])
     setOrders(data || [])
+    // Por pedido: cuánto está confirmado y cuánto en revisión.
+    const m = {}
+    for (const p of pr || []) {
+      m[p.order_id] ??= { confirmado: 0, revision: 0 }
+      m[p.order_id][p.estado === 'confirmado' ? 'confirmado' : 'revision'] += Number(p.monto)
+    }
+    setPagos(m)
+    setCuentas(cts || [])
   }
 
   async function changeStatus(o, status) {
@@ -35,15 +48,43 @@ export default function OrdersBoard() {
     load()
   }
 
+  const falta = (o) => {
+    const p = pagos[o.id] || { confirmado: 0, revision: 0 }
+    return Math.max(Number(o.total) - p.confirmado - p.revision, 0)
+  }
+
+  // Pago recibido por el personal: queda confirmado, con la cuenta donde entró.
   async function pagar(o) {
-    const txt = prompt(`Pago para ${o.order_number} (debe ${formatMoney(o.balance)}). Monto:`)
+    const txt = prompt(`Pago recibido para ${o.order_number} (falta ${formatMoney(falta(o))}). Monto:`, String(falta(o)))
     if (txt === null) return
     const monto = Number(String(txt).replace(/[^\d.]/g, ''))
-    const metodo = prompt('¿Cómo pagó? (efectivo, transferencia…)', 'efectivo')
-    if (metodo === null) return
-    const { error } = await supabase.rpc('registrar_pago', { p_order_id: o.id, p_monto: monto, p_metodo: metodo })
-    setAviso(error ? error.message : `Pago de ${formatMoney(monto)} registrado.`)
+    const lista = cuentas.map((c, i) => `${i + 1}. ${c.banco}${c.tipo_cuenta ? ` ${c.tipo_cuenta}` : ''} ${c.numero}`).join('\n')
+    const eleccion = prompt(`¿Dónde entró el dinero?\n0. Efectivo\n${lista}\n\nEscribe el número:`, cuentas.length ? '1' : '0')
+    if (eleccion === null) return
+    const cuenta = cuentas[Number(eleccion) - 1]
+    let referencia = null
+    if (cuenta) {
+      referencia = prompt('Número de referencia de la transferencia o depósito:')
+      if (referencia === null) return
+    }
+    const { error } = await supabase.rpc('reportar_pago', {
+      p_order_id: o.id, p_monto: monto, p_metodo: cuenta ? 'transferencia' : 'efectivo',
+      p_cuenta_id: cuenta?.id || null, p_referencia: referencia,
+    })
+    setAviso(error ? error.message : `Pago de ${formatMoney(monto)} registrado${cuenta ? ` en ${cuenta.banco}` : ' en efectivo'}.`)
     load()
+  }
+
+  const estadoPago = (o) => {
+    if (o.status === 'cancelado') return null
+    const p = pagos[o.id] || { confirmado: 0, revision: 0 }
+    if (p.confirmado >= Number(o.total) && Number(o.total) > 0)
+      return <span className="rounded-full bg-green-50 px-2 py-0.5 text-[11px] font-semibold text-green-700 ring-1 ring-green-200">Pagado</span>
+    if (p.revision > 0)
+      return <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 ring-1 ring-amber-200">Pago por confirmar</span>
+    if (p.confirmado > 0)
+      return <span className="rounded-full bg-sky-50 px-2 py-0.5 text-[11px] font-semibold text-sky-700 ring-1 ring-sky-200">Abonó {formatMoney(p.confirmado)}</span>
+    return <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] text-gray-500">Sin pago</span>
   }
 
   // Pone (o cambia, o quita con 0) el descuento de un pedido puntual.
@@ -85,7 +126,7 @@ export default function OrdersBoard() {
 
   const botonPago = (o) => (
     <div className="flex flex-wrap justify-end gap-1.5">
-      {puedePagos && Number(o.balance) > 0 && o.status !== 'cancelado' && (
+      {puedePagos && falta(o) > 0 && o.status !== 'cancelado' && (
         <button onClick={() => pagar(o)} className="text-xs font-semibold text-petroleo border border-gray-200 rounded-lg px-2 py-1">Registrar pago</button>
       )}
       {puedeDescuentos && !['cancelado', 'entregado'].includes(o.status) && (
@@ -125,7 +166,7 @@ export default function OrdersBoard() {
           <thead className="bg-graclaro text-gray-500 text-left">
             <tr>
               <th className="p-3">Pedido</th><th className="p-3">Cliente</th><th className="p-3">Fecha</th>
-              <th className="p-3">Total</th><th className="p-3">Debe</th><th className="p-3">Estado</th><th className="p-3"></th>
+              <th className="p-3">Total</th><th className="p-3">Pago</th><th className="p-3">Estado</th><th className="p-3"></th>
             </tr>
           </thead>
           <tbody>
@@ -135,7 +176,10 @@ export default function OrdersBoard() {
                 <td className="p-3">{o.clients?.full_name} <span className="text-xs text-gray-400">{o.clients?.client_number}</span></td>
                 <td className="p-3">{formatDate(o.created_at)}</td>
                 <td className="p-3">{totalCon(o)}</td>
-                <td className="p-3">{Number(o.balance) > 0 ? <span className="text-red-500">{formatMoney(o.balance)}</span> : '—'}</td>
+                <td className="p-3">
+                  {estadoPago(o)}
+                  {Number(o.balance) > 0 && <span className="block text-xs text-red-500">crédito {formatMoney(o.balance)}</span>}
+                </td>
                 <td className="p-3">{selectorEstado(o, 'border border-gray-200 rounded-lg px-2 py-1')}</td>
                 <td className="p-3">{botonPago(o)}</td>
               </tr>
@@ -152,6 +196,7 @@ export default function OrdersBoard() {
               <span className="text-right font-semibold">{totalCon(o)}</span>
             </div>
             <p className="text-sm text-gray-500 mb-1">{o.clients?.full_name} · {formatDate(o.created_at)}</p>
+            <div className="mb-2">{estadoPago(o)}</div>
             {Number(o.balance) > 0 && <p className="text-sm text-red-500 mb-2">Debe {formatMoney(o.balance)}</p>}
             <div className="flex items-center gap-2">
               <div className="flex-1">{selectorEstado(o, 'w-full border border-gray-200 rounded-lg px-2 py-2')}</div>
