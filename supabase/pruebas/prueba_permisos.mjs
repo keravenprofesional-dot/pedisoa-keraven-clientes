@@ -12,8 +12,8 @@ await q(`insert into profiles(id,tipo,es_supremo,usuario,telefono,full_name) val
 await q(`insert into profiles(id,tipo,rol_id,usuario,telefono,full_name) values($1,'personal',$2,'manuel','8092','Manuel'),($3,'personal',$2,'leticia','8093','Leticia')`, [MAN, rol, LET])
 
 const perms = async (uid) => (await como(db, uid, `select * from mis_permisos()`)).rows.map((r) => r.mis_permisos).sort()
-bien((await perms(MAN)).join(',') === 'cambiar_estado,crear_clientas,ver_clientas,ver_pedidos', 'Manuel arranca con los 4 del rol')
-bien((await perms(LET)).length === 4, 'Leticia también arranca con los 4 del rol')
+bien((await perms(MAN)).join(',') === 'cambiar_estado,crear_clientas,ver_clientas,ver_pedidos,ver_solicitudes', 'Manuel arranca con los 5 del rol')
+bien((await perms(LET)).length === 5, 'Leticia también arranca con los 5 del rol')
 
 // El supremo le DA un permiso extra solo a Manuel
 await como(db, SUP, `insert into pedidos_usuario_permisos values($1,'registrar_pagos',true)`, [MAN])
@@ -27,7 +27,7 @@ bien((await perms(MAN)).includes('crear_clientas'), 'Manuel la conserva')
 
 // Y que de verdad se aplique, no solo en la lista
 const { rows: r1 } = await como(db, LET, `select count(*)::int n from pedidos_permisos`)
-bien(r1[0].n === 10, 'Leticia sigue entrando normal')
+bien(r1[0].n === 11, 'Leticia sigue entrando normal')
 await como(db, SUP, `delete from pedidos_usuario_permisos where profile_id=$1 and permiso='crear_clientas'`, [LET])
 bien((await perms(LET)).includes('crear_clientas'), 'al borrar lo propio vuelve a mandar su rol')
 
@@ -36,5 +36,5 @@ let negado = false
 try { await como(db, MAN, `insert into pedidos_usuario_permisos values($1,'productos',true)`, [MAN]) } catch { negado = true }
 const tras = await perms(MAN)
 bien(negado || !tras.includes('productos'), 'Manuel NO puede darse permisos a sí mismo')
-bien((await perms(SUP)).length === 10, 'el supremo mantiene los 10')
+bien((await perms(SUP)).length === 11, 'el supremo mantiene los 11')
 console.log(`\nResultado: ${ok} bien, ${mal} fallas`)

@@ -47,7 +47,7 @@ console.log('2) Super usuario (Manuel)');
 bien((await como(db, MAN, `select * from orders`)).rows.length === 2, 've los pedidos de todas las clientas');
 bien((await como(db, MAN, `select * from clients`)).rows.length === 2, 've todas las clientas');
 const perms = (await como(db, MAN, `select * from mis_permisos()`)).rows.map(r => r.mis_permisos).sort().join(',');
-bien(perms === 'cambiar_estado,crear_clientas,ver_clientas,ver_pedidos', 'sus permisos: ' + perms);
+bien(perms === 'cambiar_estado,crear_clientas,ver_clientas,ver_pedidos,ver_solicitudes', 'sus permisos: ' + perms);
 bien((await como(db, MAN, `update orders set status='confirmado' where id=$1`, [o1.id])).affectedRows === 1, 'SI cambia el estado de un pedido');
 await falla(() => como(db, MAN, `update orders set total=1 where id=$1`, [o1.id]), 'NO cambia montos del pedido');
 await falla(() => como(db, MAN, `insert into pedidos_roles(nombre) values('Hackeo')`), 'NO crea roles');
@@ -58,7 +58,7 @@ bien((await como(db, MAN, `update company_settings set telefono='x'`)).affectedR
 bien((await como(db, MAN, `update products set precio=1`)).affectedRows === 0, 'NO cambia precios');
 
 console.log('3) Supremo');
-bien((await como(db, SUP, `select * from mis_permisos()`)).rows.length === 10, 'tiene los 10 permisos');
+bien((await como(db, SUP, `select * from mis_permisos()`)).rows.length === 11, 'tiene los 11 permisos');
 const rn = (await como(db, SUP, `insert into pedidos_roles(nombre) values('Despacho') returning id`)).rows[0].id;
 await como(db, SUP, `insert into pedidos_rol_permisos values($1,'despacho'),($1,'ver_pedidos')`, [rn]);
 bien(true, 'crea un rol nuevo con sus permisos');
