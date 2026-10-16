@@ -12,7 +12,6 @@ import { supabase } from '../lib/supabaseClient'
 // en vez del teléfono y su teléfono en vez del código. Así las clientas no
 // ven ninguna señal de que existe una entrada de administradores.
 const PARECE_CLIENTA = /^\s*cl[-\s]?\d+\s*$/i   // CL-000002
-const PARECE_USUARIO = /^\s*[a-z0-9._-]{3,30}\s*$/i
 
 export default function Entrada() {
   const { signInClienta, signInPersonal, session, profile, loading: cargando } = useAuth()
@@ -43,16 +42,15 @@ export default function Entrada() {
     e.preventDefault()
     setError(''); setEnviando(true)
     try {
-      // Con letras (y que no sea CL-…) es un usuario del personal. Solo
-      // números es una clienta; si no le sirve, se prueba como usuario por
-      // si alguien del personal tiene un usuario de puros números.
+      // Con letras (y que no sea CL-…) es un usuario del personal. Con
+      // números es una clienta (teléfono, cédula o CL-…); si no le sirve,
+      // se prueba como personal por si alguien tiene un usuario de números.
       const tieneLetras = /[a-z]/i.test(uno) && !PARECE_CLIENTA.test(uno)
       if (tieneLetras) await signInPersonal(uno, dos)
       else {
         try {
           await signInClienta(uno, dos)
-        } catch (err) {
-          if (!PARECE_USUARIO.test(uno)) throw err
+        } catch {
           await signInPersonal(uno, dos)
         }
       }
@@ -173,7 +171,7 @@ export default function Entrada() {
         ) : (
           <form onSubmit={entrar} className="flex flex-col gap-4 p-6">
             <div>
-              <label className={etiqueta}>Tu teléfono o tu número de cliente</label>
+              <label className={etiqueta}>Tu teléfono, tu cédula o tu número de cliente</label>
               {/* Teclado normal (no el de números) para que el personal pueda escribir su usuario. */}
               <input type="text" required autoCapitalize="none" autoCorrect="off" spellCheck="false" autoComplete="username"
                 placeholder="809-555-0000  ó  CL-000002" value={uno} onChange={(e) => setUno(e.target.value)} className={campo} />
