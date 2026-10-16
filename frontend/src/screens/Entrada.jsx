@@ -1,22 +1,25 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ShieldCheck, User, UserPlus, CheckCircle2 } from 'lucide-react'
+import { User, UserPlus, CheckCircle2 } from 'lucide-react'
 import Logo from '../components/Logo'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabaseClient'
 
-// Una sola pantalla de entrada con TRES pestañas:
-//   clienta  → su teléfono (o su número de cliente) + su código de acceso
-//   nuevo    → una persona que todavía no es cliente pide su perfil
-//   personal → su usuario + su teléfono (el personal)
-// `inicio` dice en qué pestaña abrir: /login entra por clienta, /personal
-// por el personal (así la app del personal instalada abre en la suya).
-export default function Entrada({ inicio = 'clienta' }) {
+// Una sola pantalla de entrada con DOS pestañas:
+//   clienta → su teléfono (o su número de cliente) + su código de acceso
+//   nuevo   → una persona que todavía no es cliente pide su perfil
+// El personal entra por la MISMA casilla de la clienta: escribe su usuario
+// en vez del teléfono y su teléfono en vez del código. Así las clientas no
+// ven ninguna señal de que existe una entrada de administradores.
+const PARECE_CLIENTA = /^\s*cl[-\s]?\d+\s*$/i   // CL-000002
+const PARECE_USUARIO = /^\s*[a-z0-9._-]{3,30}\s*$/i
+
+export default function Entrada() {
   const { signInClienta, signInPersonal, session, profile, loading: cargando } = useAuth()
   const navigate = useNavigate()
-  const [pestana, setPestana] = useState(inicio)
-  const [uno, setUno] = useState('')   // teléfono / usuario
-  const [dos, setDos] = useState('')   // código / teléfono
+  const [pestana, setPestana] = useState('clienta')
+  const [uno, setUno] = useState('')   // teléfono, número de cliente o usuario
+  const [dos, setDos] = useState('')   // código de acceso o teléfono
   const [error, setError] = useState('')
   const [enviando, setEnviando] = useState(false)
 
@@ -24,7 +27,6 @@ export default function Entrada({ inicio = 'clienta' }) {
   const [sol, setSol] = useState({ nombre: '', telefono: '', telefono2: '', cedula: '', direccion: '', correo: '' })
   const [solOk, setSolOk] = useState(false)
 
-  const esPersonal = pestana === 'personal'
   const esNuevo = pestana === 'nuevo'
 
   useEffect(() => {
@@ -41,12 +43,22 @@ export default function Entrada({ inicio = 'clienta' }) {
     e.preventDefault()
     setError(''); setEnviando(true)
     try {
-      if (esPersonal) await signInPersonal(uno, dos)
-      else await signInClienta(uno, dos)
+      // Con letras (y que no sea CL-…) es un usuario del personal. Solo
+      // números es una clienta; si no le sirve, se prueba como usuario por
+      // si alguien del personal tiene un usuario de puros números.
+      const tieneLetras = /[a-z]/i.test(uno) && !PARECE_CLIENTA.test(uno)
+      if (tieneLetras) await signInPersonal(uno, dos)
+      else {
+        try {
+          await signInClienta(uno, dos)
+        } catch (err) {
+          if (!PARECE_USUARIO.test(uno)) throw err
+          await signInPersonal(uno, dos)
+        }
+      }
     } catch {
-      setError(esPersonal
-        ? 'Usuario o teléfono incorrecto.'
-        : 'Teléfono o código incorrecto. Verifícalo con Keraven Profesional.')
+      // El mismo aviso para todos: no debe delatar que existe el personal.
+      setError('Teléfono o código incorrecto. Verifícalo con Keraven Profesional.')
       setEnviando(false)
     }
   }
@@ -84,9 +96,9 @@ export default function Entrada({ inicio = 'clienta' }) {
   )
 
   return (
-    <div className={`flex min-h-screen flex-col items-center justify-center p-6 ${esPersonal ? 'bg-negro' : 'fondo-keraven'}`}>
+    <div className="flex min-h-screen flex-col items-center justify-center p-6 fondo-keraven">
       <div className="mb-7 rounded-2xl bg-negro px-6 py-4 ring-1 ring-oro/35"><Logo size="lg" /></div>
-      <p className={`mb-7 font-sans text-[10px] uppercase tracking-[0.5em] ${esPersonal ? 'text-oro/70' : 'text-oroprof'}`}>
+      <p className="mb-7 font-sans text-[10px] uppercase tracking-[0.5em] text-oroprof">
         Keraven&nbsp;Profesional
       </p>
 
@@ -94,7 +106,6 @@ export default function Entrada({ inicio = 'clienta' }) {
         <div className="flex">
           {tab('clienta', User, 'Cliente')}
           {tab('nuevo', UserPlus, 'Soy nuevo')}
-          {tab('personal', ShieldCheck, 'Admin')}
         </div>
         <div className="filo-oro" />
 
@@ -161,34 +172,18 @@ export default function Entrada({ inicio = 'clienta' }) {
           )
         ) : (
           <form onSubmit={entrar} className="flex flex-col gap-4 p-6">
-            {esPersonal ? (
-              <>
-                <div>
-                  <label className={etiqueta}>Usuario</label>
-                  <input required autoCapitalize="none" autoCorrect="off" spellCheck="false" autoComplete="username"
-                    placeholder="Ej. manuel" value={uno} onChange={(e) => setUno(e.target.value)} className={campo} />
-                </div>
-                <div>
-                  <label className={etiqueta}>Teléfono</label>
-                  <input type="password" inputMode="tel" required autoComplete="current-password"
-                    placeholder="Tu número de teléfono" value={dos} onChange={(e) => setDos(e.target.value)} className={campo} />
-                </div>
-              </>
-            ) : (
-              <>
-                <div>
-                  <label className={etiqueta}>Tu teléfono o tu número de cliente</label>
-                  <input type="text" inputMode="tel" required autoComplete="tel"
-                    placeholder="809-555-0000  ó  CL-000002" value={uno} onChange={(e) => setUno(e.target.value)} className={campo} />
-                </div>
-                <div>
-                  <label className={etiqueta}>Código de acceso</label>
-                  <input type="text" required autoCapitalize="characters" autoComplete="one-time-code"
-                    placeholder="Ej. 4KX9-PQ2M" value={dos} onChange={(e) => setDos(e.target.value.toUpperCase())}
-                    className={`${campo} text-center text-lg tracking-[0.1em] font-semibold`} />
-                </div>
-              </>
-            )}
+            <div>
+              <label className={etiqueta}>Tu teléfono o tu número de cliente</label>
+              {/* Teclado normal (no el de números) para que el personal pueda escribir su usuario. */}
+              <input type="text" required autoCapitalize="none" autoCorrect="off" spellCheck="false" autoComplete="username"
+                placeholder="809-555-0000  ó  CL-000002" value={uno} onChange={(e) => setUno(e.target.value)} className={campo} />
+            </div>
+            <div>
+              <label className={etiqueta}>Código de acceso</label>
+              <input type="text" required autoCapitalize="characters" autoComplete="one-time-code"
+                placeholder="Ej. 4KX9-PQ2M" value={dos} onChange={(e) => setDos(e.target.value.toUpperCase())}
+                className={`${campo} text-center text-lg tracking-[0.1em] font-semibold`} />
+            </div>
 
             {error && <p className="text-red-500 text-sm text-center">{error}</p>}
             <button

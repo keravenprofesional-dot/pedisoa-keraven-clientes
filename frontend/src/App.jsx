@@ -65,8 +65,9 @@ export default function App() {
     <Suspense fallback={<Cargando />}>
       <Routes>
         {/* Una sola entrada con dos pestañas: clienta o personal */}
-        <Route path="/login" element={<Entrada inicio="clienta" />} />
-        <Route path="/personal" element={<Entrada inicio="personal" />} />
+        <Route path="/login" element={<Entrada />} />
+        {/* La app "Keraven Personal" ya instalada abre aquí: misma entrada. */}
+        <Route path="/personal" element={<Entrada />} />
 
         {/* Clienta */}
         <Route element={<ProtectedRoute tipo="clienta"><ClientLayout /></ProtectedRoute>}>
