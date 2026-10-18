@@ -12,7 +12,13 @@ export async function nuevaBase() {
   await db.exec(`
     create role anon nologin; create role authenticated nologin; create role service_role nologin bypassrls;
     create schema auth;
-    create table auth.users (id uuid primary key default gen_random_uuid(), email text unique);
+    create table auth.users (id uuid primary key default gen_random_uuid(), email text unique,
+      encrypted_password text, updated_at timestamptz);
+    -- Imitación de pgcrypto (en Supabase vive en el esquema extensions): crypt deja la clave
+    -- legible para poder comprobar en las pruebas qué clave quedó puesta.
+    create schema extensions;
+    create function extensions.gen_salt(text) returns text language sql as $$ select 'sal' $$;
+    create function extensions.crypt(clave text, sal text) returns text language sql as $$ select 'cifrada:' || clave $$;
     create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
     create function auth.role() returns text language sql stable as $$ select coalesce(nullif(current_setting('request.jwt.claim.role', true), ''), 'anon') $$;
     grant usage on schema auth to anon, authenticated;

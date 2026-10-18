@@ -6,7 +6,8 @@ import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabaseClient'
 
 // Una sola pantalla de entrada con DOS pestañas:
-//   clienta → su teléfono (o su número de cliente) + su código de acceso
+//   clienta → su teléfono (o su número de cliente) + su cédula; la que no
+//             tiene cédula registrada usa su código de acceso
 //   nuevo   → una persona que todavía no es cliente pide su perfil
 // El personal entra por la MISMA casilla de la clienta: escribe su usuario
 // en vez del teléfono y su teléfono en vez del código. Así las clientas no
@@ -56,7 +57,7 @@ export default function Entrada() {
       }
     } catch {
       // El mismo aviso para todos: no debe delatar que existe el personal.
-      setError('Teléfono o código incorrecto. Verifícalo con Keraven Profesional.')
+      setError('Los datos no coinciden. Verifícalos con Keraven Profesional.')
       setEnviando(false)
     }
   }
@@ -177,9 +178,10 @@ export default function Entrada() {
                 placeholder="809-555-0000  ó  CL-000002" value={uno} onChange={(e) => setUno(e.target.value)} className={campo} />
             </div>
             <div>
-              <label className={etiqueta}>Código de acceso</label>
+              {/* Con cédula registrada, la clave es la cédula; si no, el código de acceso. */}
+              <label className={etiqueta}>Tu cédula o tu código de acceso</label>
               <input type="text" required autoCapitalize="characters" autoComplete="one-time-code"
-                placeholder="Ej. 4KX9-PQ2M" value={dos} onChange={(e) => setDos(e.target.value.toUpperCase())}
+                placeholder="001-1234567-8  ó  4KX9-PQ2M" value={dos} onChange={(e) => setDos(e.target.value.toUpperCase())}
                 className={`${campo} text-center text-lg tracking-[0.1em] font-semibold`} />
             </div>
 
@@ -196,8 +198,8 @@ export default function Entrada() {
 
       {pestana === 'clienta' && (
         <p className="mt-6 max-w-xs text-center font-sans text-[12px] leading-relaxed text-negro/40">
-          Keraven Profesional te entrega tu código de acceso al registrarte.
-          ¿Aún no eres cliente? Toca «Soy nuevo».
+          Si tu cédula está registrada, entra con tu teléfono y tu cédula. Si no, usa el código
+          de acceso que te entregó Keraven Profesional. ¿Aún no eres cliente? Toca «Soy nuevo».
         </p>
       )}
     </div>

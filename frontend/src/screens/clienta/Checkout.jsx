@@ -4,6 +4,7 @@ import { useCart } from '../../context/CartContext'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabaseClient'
 import { formatMoney } from '../../utils/format'
+import PoliticaEnvios from '../../components/PoliticaEnvios'
 
 export default function Checkout() {
   const { items, subtotal, clearCart } = useCart()
@@ -88,7 +89,10 @@ export default function Checkout() {
       <div className="p-6 max-w-md mx-auto text-center py-16">
         <p className="text-dorado font-semibold mb-2">PEDIDO CREADO</p>
         <h1 className="text-3xl font-extrabold text-petroleo mb-4">{createdOrder.order_number}</h1>
-        <p className="text-gray-500 mb-8">Te avisaremos cuando tu pedido cambie de estado.</p>
+        <p className="text-gray-500 mb-6">Te avisaremos cuando tu pedido cambie de estado.</p>
+        <div className="mb-8">
+          <PoliticaEnvios fechaPedido={createdOrder.created_at ? new Date(createdOrder.created_at) : new Date()} />
+        </div>
         <button
           onClick={() => navigate(`/mis-pedidos/${createdOrder.id}`)}
           className="w-full bg-petroleo text-white rounded-xl py-3 font-bold mb-3"
@@ -200,6 +204,10 @@ export default function Checkout() {
             <div className="border-t pt-2 mt-2 flex justify-between font-bold">
               <span>Total</span><span>{formatMoney(total)}</span>
             </div>
+          </div>
+
+          <div className="mb-4">
+            <PoliticaEnvios compacta />
           </div>
 
           {error && <p className="text-red-500 text-sm mb-3">{error}</p>}

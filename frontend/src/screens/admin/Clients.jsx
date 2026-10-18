@@ -4,7 +4,11 @@ import { supabase } from '../../lib/supabaseClient'
 import { adminUsuarios } from '../../lib/adminUsuarios'
 import { useAuth } from '../../context/AuthContext'
 import { formatMoney } from '../../utils/format'
-import { formatCode } from '../../utils/accessCode'
+import { formatCode, soloDigitos } from '../../utils/accessCode'
+
+// La clienta con cédula registrada entra con su teléfono + su cédula (la base de datos
+// pone la cédula como su clave). Solo las que no tienen cédula usan código de acceso.
+const entraConCedula = (c) => soloDigitos(c?.cedula).length === 11
 
 const vacio = {
   full_name: '', phone: '', phone2: '', correo: '', cedula: '', direccion: '',
@@ -139,7 +143,9 @@ export default function Clients() {
       const datos = { ...form, credit_limit: Number(form.credit_limit || 0) }
       if (editando === 'nueva') {
         const r = await adminUsuarios('crear_clienta', datos)
-        setCodigo({ full_name: form.full_name, access_code: r.access_code, telefono: form.phone })
+        setCodigo(entraConCedula(form)
+          ? { full_name: form.full_name, porCedula: true, telefono: form.phone }
+          : { full_name: form.full_name, access_code: r.access_code, telefono: form.phone })
         // Si vino del buzón, la solicitud queda aprobada sola.
         if (solicitudId) {
           await supabase.rpc('atender_solicitud', {
@@ -162,6 +168,10 @@ export default function Clients() {
   }
 
   async function nuevoCodigo(c) {
+    if (entraConCedula(c)) {
+      alert(`${c.full_name} entra con su teléfono y su cédula. No usa código de acceso.`)
+      return
+    }
     if (!confirm(`¿Darle un código nuevo a ${c.full_name}? El código anterior dejará de servir.`)) return
     try {
       const r = await adminUsuarios('regenerar_codigo', { client_id: c.id })
@@ -244,7 +254,17 @@ export default function Clients() {
         </div>
       )}
 
-      {codigo && (
+      {codigo?.porCedula && (
+        <div className="bg-dorado/10 border border-dorado rounded-xl p-4 mb-4">
+          <p className="text-sm text-grafondo">
+            <strong>{codigo.full_name}</strong> ya puede entrar con su teléfono <strong>{codigo.telefono}</strong> + su cédula.
+            No necesita código de acceso.
+          </p>
+          <button onClick={() => setCodigo(null)} className="text-xs text-gray-500 underline mt-2">Ocultar</button>
+        </div>
+      )}
+
+      {codigo && !codigo.porCedula && (
         <div className="bg-dorado/10 border border-dorado rounded-xl p-4 mb-4">
           <p className="text-sm text-grafondo">
             Entrégale a <strong>{codigo.full_name}</strong> estos datos para entrar (solo se muestran ahora):
@@ -370,7 +390,9 @@ export default function Clients() {
                     <td className="p-3">
                       <div className="flex gap-1 justify-end">
                         <button onClick={() => abrir(c)} title="Editar" className="text-gray-400 hover:text-petroleo p-1"><Pencil size={16} /></button>
-                        <button onClick={() => nuevoCodigo(c)} title="Darle un código nuevo" className="text-gray-400 hover:text-petroleo p-1"><KeyRound size={16} /></button>
+                        {entraConCedula(c)
+                          ? <span title="Entra con su teléfono + su cédula" className="self-center rounded-full bg-gray-100 px-2 py-0.5 text-[10px] text-gray-500">cédula</span>
+                          : <button onClick={() => nuevoCodigo(c)} title="Darle un código nuevo" className="text-gray-400 hover:text-petroleo p-1"><KeyRound size={16} /></button>}
                         <button onClick={() => activar(c, !activa)} title={activa ? 'Desactivar' : 'Activar'} className={`p-1 ${activa ? 'text-gray-400 hover:text-red-500' : 'text-green-600'}`}>
                           {activa ? <UserX size={16} /> : <UserCheck size={16} />}
                         </button>
@@ -404,7 +426,9 @@ export default function Clients() {
               {puedeEditar && (
                 <div className="flex gap-3 mt-2 text-xs">
                   <button onClick={() => abrir(c)} className="flex items-center gap-1 text-petroleo"><Pencil size={13} /> Editar</button>
-                  <button onClick={() => nuevoCodigo(c)} className="flex items-center gap-1 text-petroleo"><KeyRound size={13} /> Nuevo código</button>
+                  {entraConCedula(c)
+                    ? <span className="text-gray-500">Entra con su cédula</span>
+                    : <button onClick={() => nuevoCodigo(c)} className="flex items-center gap-1 text-petroleo"><KeyRound size={13} /> Nuevo código</button>}
                   <button onClick={() => activar(c, !activa)} className={activa ? 'text-red-500' : 'text-green-700'}>{activa ? 'Desactivar' : 'Activar'}</button>
                 </div>
               )}

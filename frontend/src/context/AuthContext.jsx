@@ -75,7 +75,8 @@ export function AuthProvider({ children }) {
     return data
   }
 
-  // Puerta de clientas: teléfono + código de acceso.
+  // Puerta de clientas: teléfono + cédula (o código de acceso si no tiene cédula).
+  // normalizeCode deja solo letras y números, así que la cédula con guiones sirve igual.
   async function signInClienta(telefono, codigo) {
     const email = await correoDe(soloDigitos(telefono), true)
     const { error } = await supabase.auth.signInWithPassword({ email, password: normalizeCode(codigo) })
