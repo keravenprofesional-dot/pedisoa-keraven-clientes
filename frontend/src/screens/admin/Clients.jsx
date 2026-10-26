@@ -301,7 +301,12 @@ export default function Clients() {
               {paradas.filter((p) => p.activo).map((p) => <option key={p.id} value={p.id}>{p.nombre}{p.zona ? ` — ${p.zona}` : ''}</option>)}
             </select>
           </label>
-          {puedeEditar && (
+          {editando === 'nueva' && (
+            <p className="md:col-span-3 text-xs text-gray-500">
+              Toda clienta nace al contado. El crédito se le da después, editándola.
+            </p>
+          )}
+          {puedeEditar && editando !== 'nueva' && (
             <>
               <select value={form.payment_condition} onChange={(e) => setForm({ ...form, payment_condition: e.target.value })} className="border border-gray-200 rounded-lg px-3 py-2">
                 <option value="contado">Condición: Contado</option>

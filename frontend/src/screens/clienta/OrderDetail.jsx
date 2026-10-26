@@ -38,6 +38,12 @@ export default function OrderDetail() {
           <p className="text-xs text-gray-400">{formatDate(order.created_at)}</p>
         </div>
 
+        {order.editado_en && (
+          <p className="text-xs text-sky-800 bg-sky-50 ring-1 ring-sky-200 rounded-lg px-3 py-2 mb-2">
+            Keraven ajustó este pedido el {formatDate(order.editado_en)}. Esto es lo que va.
+          </p>
+        )}
+
         <div className="border-t border-b py-3 my-3">
           {items.map((it) => (
             <div key={it.id} className="flex justify-between text-sm py-1">

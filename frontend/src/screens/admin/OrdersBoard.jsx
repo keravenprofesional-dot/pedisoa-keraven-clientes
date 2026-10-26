@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { Percent } from 'lucide-react'
+import { Pencil, Percent } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { useAuth } from '../../context/AuthContext'
+import EditarPedido from '../../components/EditarPedido'
 import { formatMoney, formatDate, STATUS_LABELS, STATUS_ORDER, colorDe } from '../../utils/format'
 
 const ESTADOS = STATUS_ORDER.concat('cancelado')
@@ -11,12 +12,14 @@ export default function OrdersBoard() {
   const puedeEstado = puede('cambiar_estado')
   const puedePagos = puede('registrar_pagos')
   const puedeDescuentos = puede('dar_descuentos')
+  const puedeEditar = puede('editar_pedidos')
   const [orders, setOrders] = useState([])
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [aviso, setAviso] = useState('')
   const [pagos, setPagos] = useState({})   // order_id → { confirmado, revision }
   const [cuentas, setCuentas] = useState([])
+  const [editando, setEditando] = useState(null)
 
   useEffect(() => { load() }, [])
 
@@ -126,6 +129,12 @@ export default function OrdersBoard() {
 
   const botonPago = (o) => (
     <div className="flex flex-wrap justify-end gap-1.5">
+      {puedeEditar && o.status === 'recibido' && (
+        <button onClick={() => setEditando(o)} title="Cambiar productos, cantidades o descuento antes de confirmar"
+          className="flex items-center gap-1 text-xs font-semibold text-sky-700 border border-sky-200 rounded-lg px-2 py-1">
+          <Pencil size={12} /> Editar
+        </button>
+      )}
       {puedePagos && falta(o) > 0 && o.status !== 'cancelado' && (
         <button onClick={() => pagar(o)} className="text-xs font-semibold text-petroleo border border-gray-200 rounded-lg px-2 py-1">Registrar pago</button>
       )}
@@ -206,6 +215,10 @@ export default function OrdersBoard() {
         ))}
       </div>
       {filtered.length === 0 && <p className="text-gray-400 text-center py-10">No hay pedidos.</p>}
+      {editando && (
+        <EditarPedido order={editando} alCerrar={() => setEditando(null)}
+          alGuardar={(msg) => { setEditando(null); setAviso(msg); load() }} />
+      )}
     </div>
   )
 }

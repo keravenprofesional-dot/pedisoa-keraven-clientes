@@ -34,6 +34,9 @@ export async function nuevaBase() {
   // Solo en la copia de pruebas: a los clientes de prueba que no traen cédula se les
   // inventa una (la cédula es obligatoria desde el 14-oct). prueba_cedula.mjs prueba la regla.
   await db.exec(`alter table clients alter column cedula set default lpad((floor(random() * 1e11))::bigint::text, 11, '0')`)
+  // Igual: las pruebas viejas crean clientas que ya tienen crédito (como si el gerente
+  // se lo hubiera dado). prueba_nace_contado.mjs enciende la regla y la prueba.
+  await db.exec(`alter table clients disable trigger trg_clienta_nace_al_contado`)
   return db
 }
 

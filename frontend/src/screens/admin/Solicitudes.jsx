@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Phone, Mail, MapPin, CreditCard, Check, X, UserPlus } from 'lucide-react'
+import { Phone, Mail, MapPin, CreditCard, X, UserPlus } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { formatDate } from '../../utils/format'
 
@@ -12,6 +12,7 @@ export default function Solicitudes() {
   const [filtro, setFiltro] = useState('pendiente')
   const [cargando, setCargando] = useState(true)
   const [aviso, setAviso] = useState('')
+  const [yaClientas, setYaClientas] = useState(new Set())   // teléfonos y cédulas que ya tienen perfil
 
   useEffect(() => { cargar() }, [])
 
@@ -22,6 +23,8 @@ export default function Solicitudes() {
       .select('*')
       .order('creado_en', { ascending: false })
     setLista(data || [])
+    const { data: cl } = await supabase.from('clients').select('telefono_login, cedula')
+    setYaClientas(new Set((cl || []).flatMap((c) => [soloNumeros(c.telefono_login), soloNumeros(c.cedula)]).filter(Boolean)))
     setCargando(false)
   }
 
@@ -45,6 +48,10 @@ export default function Solicitudes() {
     try { sessionStorage.setItem('prefill_cliente', JSON.stringify(datos)) } catch (e) { /* sin memoria */ }
     navigate('/admin/clientas?nuevo=1')
   }
+
+  // Aprobada pero sin perfil: pasó con el botón viejo de "Aprobar", que no creaba la clienta.
+  const sinPerfil = (s) => s.estado === 'aprobada' &&
+    !yaClientas.has(soloNumeros(s.telefono)) && !(s.cedula && yaClientas.has(soloNumeros(s.cedula)))
 
   const pendientes = lista.filter((s) => s.estado === 'pendiente').length
   const filtrada = lista.filter((s) => filtro === 'todas' || s.estado === filtro)
@@ -95,15 +102,22 @@ export default function Solicitudes() {
 
               {s.nota_admin && <p className="mt-2 rounded-lg bg-graclaro p-2 text-xs text-gray-500">Nota: {s.nota_admin}</p>}
 
-              {s.estado === 'pendiente' && (
-                <div className="mt-3 flex flex-wrap gap-2">
+              {sinPerfil(s) && (
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-semibold text-amber-700">Aprobada, pero todavía no tiene perfil.</span>
                   <button onClick={() => crearCliente(s)}
                     className="flex items-center gap-1.5 rounded-lg bg-petroleo px-3 py-1.5 text-sm font-semibold text-white">
-                    <UserPlus size={15} /> Crear cliente
+                    <UserPlus size={15} /> Crear su perfil
                   </button>
-                  <button onClick={() => atender(s, 'aprobada')}
-                    className="flex items-center gap-1.5 rounded-lg border border-green-600 px-3 py-1.5 text-sm font-semibold text-green-700">
-                    <Check size={15} /> Aprobar
+                </div>
+              )}
+
+              {s.estado === 'pendiente' && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {/* Aprobar = crearle el perfil: al guardarlo sale en Clientes en ese momento. */}
+                  <button onClick={() => crearCliente(s)}
+                    className="flex items-center gap-1.5 rounded-lg bg-petroleo px-3 py-1.5 text-sm font-semibold text-white">
+                    <UserPlus size={15} /> Aprobar y crear perfil
                   </button>
                   <button onClick={() => atender(s, 'rechazada')}
                     className="flex items-center gap-1.5 rounded-lg border border-red-400 px-3 py-1.5 text-sm font-semibold text-red-500">
@@ -118,3 +132,5 @@ export default function Solicitudes() {
     </div>
   )
 }
+
+const soloNumeros = (t) => String(t || '').replace(/D/g, '')
