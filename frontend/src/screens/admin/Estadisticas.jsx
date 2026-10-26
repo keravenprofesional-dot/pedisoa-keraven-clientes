@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Eye, Users, CalendarDays, ShoppingBag, Package } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
-import { formatMoney } from '../../utils/format'
+import { formatMoney, formatDate } from '../../utils/format'
 
 const PERIODOS = [[7, '7 días'], [30, '30 días'], [90, '90 días']]
 
@@ -64,11 +64,13 @@ export default function Estadisticas() {
           <div className="grid gap-4 lg:grid-cols-2">
             <Ranking titulo="Más vistos" icono={Eye} filas={e.mas_vistos}
               dato={(p) => `${p.vistas} vista${p.vistas == 1 ? '' : 's'}`}
-              sub={(p) => `${p.clientes} cliente${p.clientes == 1 ? '' : 's'}`} />
+              sub={(p) => (p.quien || []).map((x) => x.vistas > 1 ? `${x.nombre} (${x.vistas})` : x.nombre).join(', ')} />
             <Ranking titulo="Más comprados" icono={ShoppingBag} filas={e.mas_comprados}
               dato={(p) => `${p.unidades} unid.`}
               sub={(p) => `${p.pedidos} pedido${p.pedidos == 1 ? '' : 's'} · ${formatMoney(p.monto)}`} />
           </div>
+
+          <Quienes filas={e.quienes || []} />
         </>
       )}
     </div>
@@ -113,6 +115,45 @@ function Ranking({ titulo, icono: Icono, filas, dato, sub }) {
             </li>
           ))}
         </ol>
+      )}
+    </div>
+  )
+}
+
+// Cada clienta que entró en el período: cuántas veces, cuándo fue la última
+// y qué productos miró.
+function Quienes({ filas }) {
+  return (
+    <div className="mt-4 rounded-2xl border border-gray-100 bg-white p-4">
+      <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-grafondo"><Users size={16} className="text-petroleo" /> Quién entró y qué miró</p>
+      {filas.length === 0 ? (
+        <p className="py-6 text-center text-sm text-gray-400">Nadie ha entrado en este período.</p>
+      ) : (
+        <ul className="divide-y divide-gray-100">
+          {filas.map((c) => (
+            <li key={c.profile_id} className="py-2.5">
+              <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+                <p className="text-sm font-semibold text-grafondo">
+                  {c.nombre}{c.numero && <span className="ml-1.5 text-xs font-normal text-gray-400">{c.numero}</span>}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {c.visitas} visita{c.visitas == 1 ? '' : 's'} · última {formatDate(c.ultima)}
+                </p>
+              </div>
+              {c.miro?.length > 0 ? (
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {c.miro.map((m) => (
+                    <span key={m.nombre} className="rounded-full bg-graclaro px-2 py-0.5 text-[11px] text-gray-600">
+                      {m.nombre}{m.vistas > 1 && ` ×${m.vistas}`}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-1 text-[11px] text-gray-400">Entró, pero no abrió ningún producto.</p>
+              )}
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   )

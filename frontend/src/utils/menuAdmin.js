@@ -3,15 +3,16 @@ import { LayoutDashboard, Package, Users, ShoppingCart, Truck, Settings, UserCog
 // Pantallas del panel y qué hace falta para verlas.
 //   permiso: alguno de estos (lista) basta
 //   supremo: solo el supremo usuario
+//   novedad: muestra el punto con lo nuevo por ver (ver utils/novedades.jsx)
 export const MENU_ADMIN = [
   { to: '/admin/resumen', icon: LayoutDashboard, label: 'Resumen', permiso: ['ver_resumen'] },
-  { to: '/admin/estadisticas', icon: BarChart3, label: 'Estadísticas', permiso: ['ver_resumen'] },
-  { to: '/admin/pedidos', icon: ShoppingCart, label: 'Pedidos', permiso: ['ver_pedidos'] },
-  { to: '/admin/pagos', icon: Landmark, label: 'Pagos', permiso: ['registrar_pagos'] },
+  { to: '/admin/estadisticas', icon: BarChart3, label: 'Estadísticas', permiso: ['ver_resumen'], novedad: 'estadisticas' },
+  { to: '/admin/pedidos', icon: ShoppingCart, label: 'Pedidos', permiso: ['ver_pedidos'], novedad: 'pedidos' },
+  { to: '/admin/pagos', icon: Landmark, label: 'Pagos', permiso: ['registrar_pagos'], novedad: 'pagos' },
   { to: '/admin/seguimiento', icon: Route, label: 'Seguimiento', permiso: ['ver_pedidos', 'despacho', 'cambiar_estado'] },
   { to: '/admin/despacho', icon: Truck, label: 'Despacho', permiso: ['despacho'] },
   { to: '/admin/clientas', icon: Users, label: 'Clientes', permiso: ['ver_clientas', 'crear_clientas'] },
-  { to: '/admin/solicitudes', icon: Inbox, label: 'Solicitudes', permiso: ['ver_solicitudes', 'crear_clientas'] },
+  { to: '/admin/solicitudes', icon: Inbox, label: 'Solicitudes', permiso: ['ver_solicitudes', 'crear_clientas'], novedad: 'solicitudes' },
   { to: '/admin/productos', icon: Package, label: 'Productos', permiso: ['productos'] },
   { to: '/admin/promociones', icon: Megaphone, label: 'Promociones', permiso: ['promociones', 'configuracion'] },
   { to: '/admin/configuracion', icon: Settings, label: 'Configuración', permiso: ['configuracion'] },
