@@ -66,12 +66,13 @@ export default function ProductCard({ product, onAdd, onVer, piezas = 0 }) {
 
         <div className="mt-auto pt-3">
           <div className="filo-oro mb-2.5 opacity-55" />
-          <div className="flex items-center justify-between gap-2">
-            <span className="font-display text-[17px] tabular-nums text-negro">{formatMoney(product.precio)}</span>
+          {/* En celular no caben precio y botón en un renglón: el botón baja solo. */}
+          <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-2">
+            <span className="whitespace-nowrap font-display text-[17px] tabular-nums text-negro">{formatMoney(product.precio)}</span>
             <button
               onClick={(e) => { e.stopPropagation(); onAdd(product) }}
               disabled={agotado}
-              className="inline-flex h-9 shrink-0 items-center gap-1 rounded-full bg-negro px-3.5 font-sans text-[10px] font-medium uppercase tracking-[0.2em] text-orosuave transition active:scale-95 disabled:bg-transparent disabled:text-negro/30 disabled:ring-1 disabled:ring-negro/15"
+              className="inline-flex h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-negro px-3.5 font-sans text-[10px] font-medium uppercase tracking-[0.2em] text-orosuave transition active:scale-95 disabled:bg-transparent disabled:text-negro/30 disabled:ring-1 disabled:ring-negro/15"
             >
               <Plus size={13} strokeWidth={2} /> Añadir
             </button>
