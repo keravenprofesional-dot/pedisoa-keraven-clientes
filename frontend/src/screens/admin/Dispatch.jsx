@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabaseClient'
-import { formatMoney } from '../../utils/format'
+import Debe from '../../components/Debe'
 
 export default function Dispatch() {
   const [orders, setOrders] = useState([])
@@ -60,7 +60,8 @@ export default function Dispatch() {
             <div className="flex justify-between items-center cursor-pointer" onClick={() => toggleExpand(o.id)}>
               <div>
                 <p className="font-bold text-petroleo">{o.order_number} — {o.clients?.full_name}</p>
-                <p className="text-xs text-gray-400">{o.clients?.client_phones?.[0]?.phone} · Balance: {formatMoney(o.balance)}</p>
+                <p className="text-xs text-gray-400">{o.clients?.client_phones?.[0]?.phone}</p>
+                <Debe monto={o.balance} className="mt-1" />
               </div>
               <span className="text-xs bg-dorado/20 text-dorado font-semibold px-2 py-1 rounded-full capitalize">
                 {o.status.replace('_', ' ')}

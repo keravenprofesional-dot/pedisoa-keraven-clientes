@@ -5,6 +5,7 @@ import { adminUsuarios } from '../../lib/adminUsuarios'
 import { useAuth } from '../../context/AuthContext'
 import { formatMoney } from '../../utils/format'
 import { formatCode, soloDigitos } from '../../utils/accessCode'
+import Debe from '../../components/Debe'
 
 // La clienta con cédula registrada entra con su teléfono + su cédula (la base de datos
 // pone la cédula como su clave). Solo las que no tienen cédula usan código de acceso.
@@ -389,7 +390,7 @@ export default function Clients() {
                     {c.credit_enabled && <span className="text-green-700 text-xs block">crédito aprobado{Number(c.credit_limit) > 0 && ` · ${formatMoney(c.credit_limit)}`}</span>}
                   </td>
                   <td className="p-3 text-right whitespace-nowrap">
-                    {Number(c.balance_pendiente) > 0 ? <span className="text-red-500 font-semibold">{formatMoney(c.balance_pendiente)}</span> : '—'}
+                    {Number(c.balance_pendiente) > 0 ? <Debe monto={c.balance_pendiente} texto="" /> : '—'}
                   </td>
                   {puedeEditar && (
                     <td className="p-3">
@@ -426,8 +427,8 @@ export default function Clients() {
               </div>
               <p className="text-sm text-gray-500">
                 {c.telefono_login} · {c.delivery_stops?.nombre || 'sin parada'}
-                {Number(c.balance_pendiente) > 0 && <span className="text-red-500 font-semibold"> · debe {formatMoney(c.balance_pendiente)}</span>}
               </p>
+              <Debe monto={c.balance_pendiente} className="mt-1" />
               {puedeEditar && (
                 <div className="flex gap-3 mt-2 text-xs">
                   <button onClick={() => abrir(c)} className="flex items-center gap-1 text-petroleo"><Pencil size={13} /> Editar</button>

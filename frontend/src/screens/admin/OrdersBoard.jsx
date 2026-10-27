@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabaseClient'
 import { useAuth } from '../../context/AuthContext'
 import EditarPedido from '../../components/EditarPedido'
 import { formatMoney, formatDate, STATUS_LABELS, STATUS_ORDER, colorDe } from '../../utils/format'
+import Debe from '../../components/Debe'
 
 const ESTADOS = STATUS_ORDER.concat('cancelado')
 
@@ -187,7 +188,7 @@ export default function OrdersBoard() {
                 <td className="p-3">{totalCon(o)}</td>
                 <td className="p-3">
                   {estadoPago(o)}
-                  {Number(o.balance) > 0 && <span className="block text-xs text-red-500">crédito {formatMoney(o.balance)}</span>}
+                  <Debe monto={o.balance} className="mt-1" />
                 </td>
                 <td className="p-3">{selectorEstado(o, 'border border-gray-200 rounded-lg px-2 py-1')}</td>
                 <td className="p-3">{botonPago(o)}</td>
@@ -206,7 +207,7 @@ export default function OrdersBoard() {
             </div>
             <p className="text-sm text-gray-500 mb-1">{o.clients?.full_name} · {formatDate(o.created_at)}</p>
             <div className="mb-2">{estadoPago(o)}</div>
-            {Number(o.balance) > 0 && <p className="text-sm text-red-500 mb-2">Debe {formatMoney(o.balance)}</p>}
+            {Number(o.balance) > 0 && <p className="mb-2"><Debe monto={o.balance} /></p>}
             <div className="flex items-center gap-2">
               <div className="flex-1">{selectorEstado(o, 'w-full border border-gray-200 rounded-lg px-2 py-2')}</div>
               {botonPago(o)}
