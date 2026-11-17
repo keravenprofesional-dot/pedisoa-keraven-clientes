@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext'
 import EditarPedido from '../../components/EditarPedido'
 import { formatMoney, formatDate, STATUS_LABELS, STATUS_ORDER, colorDe } from '../../utils/format'
 import Debe from '../../components/Debe'
+import { VentanaEnvio, BotonEnvio, BotonVolante } from '../../components/EnvioYVolante'
 
 const ESTADOS = STATUS_ORDER.concat('cancelado')
 
@@ -14,6 +15,8 @@ export default function OrdersBoard() {
   const puedePagos = puede('registrar_pagos')
   const puedeDescuentos = puede('dar_descuentos')
   const puedeEditar = puede('editar_pedidos')
+  const puedeEnvio = puede('despacho') || puedeEditar
+  const [conEnvio, setConEnvio] = useState(null)
   const [orders, setOrders] = useState([])
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -145,6 +148,10 @@ export default function OrdersBoard() {
           <Percent size={12} /> Descuento
         </button>
       )}
+      {puedeEnvio && !['cancelado', 'entregado'].includes(o.status) && (
+        <BotonEnvio onClick={() => setConEnvio(o)} />
+      )}
+      {o.status !== 'cancelado' && <BotonVolante order={o} alAvisar={setAviso} />}
     </div>
   )
   const totalCon = (o) => (
@@ -154,6 +161,11 @@ export default function OrdersBoard() {
         <span className="block text-[11px] text-amber-700" title={o.descuento_nota || ''}>
           −{formatMoney(o.descuento)} desc.
         </span>
+      )}
+      {Number(o.envio) > 0 ? (
+        <span className="block text-[11px] text-cyan-800" title={o.envio_nota || ''}>+{formatMoney(o.envio)} envío</span>
+      ) : o.delivery_method === 'envio' && !['cancelado', 'entregado'].includes(o.status) && (
+        <span className="block text-[11px] font-semibold text-amber-700">envío por poner</span>
       )}
     </>
   )
@@ -219,6 +231,10 @@ export default function OrdersBoard() {
       {editando && (
         <EditarPedido order={editando} alCerrar={() => setEditando(null)}
           alGuardar={(msg) => { setEditando(null); setAviso(msg); load() }} />
+      )}
+      {conEnvio && (
+        <VentanaEnvio order={conEnvio} alCerrar={() => setConEnvio(null)}
+          alGuardar={(msg) => { setConEnvio(null); setAviso(msg); load() }} />
       )}
     </div>
   )

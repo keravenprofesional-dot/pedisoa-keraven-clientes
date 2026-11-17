@@ -92,7 +92,7 @@ export default function Catalogo() {
         <Combos tipo="linea" titulo="Línea" ejemplo="Por ejemplo: la Línea de Coco con su shampoo, su tratamiento y su mascarilla." />
       )}
       {pestana === 'duo_pack' && (
-        <Combos tipo="duo_pack" titulo="Duo Pack" ejemplo="Caja de un solo sabor. Por ejemplo: 16 shampoo de coco." />
+        <Combos tipo="duo_pack" titulo="Duo Pack" ejemplo="Caja de un solo sabor. Por ejemplo: 16 shampoo de coco, 16 mascarillas de coco, o las dos cajas juntas (16 shampoo + 16 mascarillas)." />
       )}
       {pestana === 'duo_pack_mixto' && (
         <Combos tipo="duo_pack_mixto" titulo="Duo Pack Mixto" ejemplo="Caja repartida en dos sabores. Por ejemplo: 8 de coco y 8 de zanahoria." />

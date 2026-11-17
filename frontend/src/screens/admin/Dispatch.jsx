@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabaseClient'
 import Debe from '../../components/Debe'
+import { VentanaEnvio, BotonEnvio, BotonVolante } from '../../components/EnvioYVolante'
+import { formatMoney } from '../../utils/format'
 
 export default function Dispatch() {
   const [orders, setOrders] = useState([])
+  const [conEnvio, setConEnvio] = useState(null)
+  const [aviso, setAviso] = useState('')
   const [checked, setChecked] = useState({}) // { orderId: { itemId: true } }
   const [expanded, setExpanded] = useState(null)
   const [itemsByOrder, setItemsByOrder] = useState({})
@@ -54,6 +58,7 @@ export default function Dispatch() {
   return (
     <div className="p-4 md:p-8">
       <h1 className="text-2xl font-bold text-grafondo mb-4">Preparación y despacho</h1>
+      {aviso && <p className="bg-graclaro border border-gray-200 text-sm rounded-xl p-3 mb-4">{aviso}</p>}
       <div className="flex flex-col gap-3">
         {orders.map((o) => (
           <div key={o.id} className="bg-white border border-gray-100 rounded-xl p-4">
@@ -62,6 +67,11 @@ export default function Dispatch() {
                 <p className="font-bold text-petroleo">{o.order_number} — {o.clients?.full_name}</p>
                 <p className="text-xs text-gray-400">{o.clients?.client_phones?.[0]?.phone}</p>
                 <Debe monto={o.balance} className="mt-1" />
+                {Number(o.envio) > 0 ? (
+                  <p className="text-xs text-cyan-800 mt-1">Envío {formatMoney(o.envio)}{o.envio_nota ? ` · ${o.envio_nota}` : ''}</p>
+                ) : o.delivery_method === 'envio' && (
+                  <p className="text-xs font-semibold text-amber-700 mt-1">Envío por poner</p>
+                )}
               </div>
               <span className="text-xs bg-dorado/20 text-dorado font-semibold px-2 py-1 rounded-full capitalize">
                 {o.status.replace('_', ' ')}
@@ -90,6 +100,11 @@ export default function Dispatch() {
                     </span>
                   </label>
                 ))}
+
+                <div className="flex flex-wrap gap-2 mt-3">
+                  <BotonEnvio onClick={() => setConEnvio(o)} />
+                  <BotonVolante order={o} alAvisar={setAviso} />
+                </div>
 
                 <div className="flex gap-2 mt-3">
                   {o.status !== 'despachado' && o.status !== 'en_entrega' && (
@@ -123,6 +138,10 @@ export default function Dispatch() {
         ))}
         {orders.length === 0 && <p className="text-gray-400 text-center py-10">No hay pedidos pendientes.</p>}
       </div>
+      {conEnvio && (
+        <VentanaEnvio order={conEnvio} alCerrar={() => setConEnvio(null)}
+          alGuardar={(msg) => { setConEnvio(null); setAviso(msg); load() }} />
+      )}
     </div>
   )
 }

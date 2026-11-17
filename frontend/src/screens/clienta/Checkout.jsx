@@ -26,7 +26,9 @@ export default function Checkout() {
   const [error, setError] = useState('')
   const [createdOrder, setCreatedOrder] = useState(null)
 
-  const envio = deliveryMethod === 'envio' ? 150 : 0 // ejemplo: costo fijo configurable a futuro
+  // El envío no es fijo: lo pone el personal después, según quién lo lleve.
+  const conEnvio = deliveryMethod === 'envio'
+  const envio = 0
   // El % fijo que el administrador le dio (la base lo vuelve a calcular igual).
   const [miDescuento, setMiDescuento] = useState(0)
   useEffect(() => {
@@ -190,7 +192,7 @@ export default function Checkout() {
                 </div>
               ))}
             </div>
-            {(descuento > 0 || envio > 0) && (
+            {(descuento > 0 || conEnvio) && (
               <div className="border-t pt-2 mt-2 space-y-1 text-gray-600">
                 <div className="flex justify-between"><span>Subtotal</span><span>{formatMoney(subtotal)}</span></div>
                 {descuento > 0 && (
@@ -198,12 +200,19 @@ export default function Checkout() {
                     <span>Tu descuento ({miDescuento}%)</span><span>−{formatMoney(descuento)}</span>
                   </div>
                 )}
-                {envio > 0 && <div className="flex justify-between"><span>Envío</span><span>{formatMoney(envio)}</span></div>}
+                {conEnvio && (
+                  <div className="flex justify-between"><span>Envío</span><span className="text-amber-700">por confirmar</span></div>
+                )}
               </div>
             )}
             <div className="border-t pt-2 mt-2 flex justify-between font-bold">
-              <span>Total</span><span>{formatMoney(total)}</span>
+              <span>Total{conEnvio ? ' sin envío' : ''}</span><span>{formatMoney(total)}</span>
             </div>
+            {conEnvio && (
+              <p className="text-xs text-gray-500">
+                Te confirmamos el costo del envío según tu dirección y se suma a tu total.
+              </p>
+            )}
           </div>
 
           <div className="mb-4">

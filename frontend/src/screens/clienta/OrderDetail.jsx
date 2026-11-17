@@ -68,7 +68,13 @@ export default function OrderDetail() {
               <span>−{formatMoney(order.descuento)}</span>
             </div>
           )}
-          <div className="flex justify-between"><span>Envío</span><span>{formatMoney(order.envio)}</span></div>
+          {Number(order.envio) > 0 ? (
+            <div className="flex justify-between">
+              <span>Envío{order.envio_nota ? ` · ${order.envio_nota}` : ''}</span><span>{formatMoney(order.envio)}</span>
+            </div>
+          ) : order.delivery_method === 'envio' && !['cancelado', 'entregado'].includes(order.status) && (
+            <div className="flex justify-between"><span>Envío</span><span className="text-amber-700">por confirmar</span></div>
+          )}
           <div className="flex justify-between font-bold text-base border-t pt-1 mt-1">
             <span>TOTAL</span><span>{formatMoney(order.total)}</span>
           </div>

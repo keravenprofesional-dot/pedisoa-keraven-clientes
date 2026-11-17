@@ -48,6 +48,10 @@ export default function Combos({ tipo, titulo, ejemplo }) {
     setTodosLosCodigos(cods || [])
   }
 
+  // Un Duo Pack puede ser una caja de un solo producto (16 shampoo de coco);
+  // el Duo Kit, el Mixto y la Línea juntan por lo menos 2 productos distintos.
+  const minimo = tipo === 'duo_pack' ? 1 : 2
+
   const porId = useMemo(() => new Map(productos.map((p) => [p.id, p])), [productos])
   const sumaSuelta = piezas.reduce((n, x) => n + Number(x.producto.precio || 0) * x.cantidad, 0)
 
@@ -97,8 +101,10 @@ export default function Combos({ tipo, titulo, ejemplo }) {
       if (armado.sabores.some((s) => !s.nombre.trim() || s.productos.some((p) => !p))) {
         return setAviso('Hay un sabor sin nombre o sin producto en algún grupo')
       }
-    } else if (piezas.length < 2) {
-      return setAviso('Un combo lleva por lo menos 2 productos adentro')
+    } else if (piezas.length < minimo) {
+      return setAviso(minimo === 1
+        ? 'Elige qué producto lleva la caja'
+        : 'Un combo lleva por lo menos 2 productos adentro')
     }
     setGuardando(true); setAviso('')
     try {
@@ -244,7 +250,13 @@ export default function Combos({ tipo, titulo, ejemplo }) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 border-t border-gray-100 pt-4">
             <div>
               <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Qué lleva adentro ({piezas.length})</h4>
-              {piezas.length === 0 && <p className="text-sm text-gray-400">Elige por lo menos 2 productos de la derecha.</p>}
+              {piezas.length === 0 && (
+                <p className="text-sm text-gray-400">
+                  {minimo === 1
+                    ? 'Elige el producto de la derecha y pon cuántas unidades lleva la caja (ej. 16).'
+                    : 'Elige por lo menos 2 productos de la derecha.'}
+                </p>
+              )}
               <div className="flex flex-col gap-1">
                 {piezas.map((x) => (
                   <div key={x.producto.id} className="flex items-center gap-2 bg-pastelsuave rounded-lg px-2 py-1.5 text-sm">
