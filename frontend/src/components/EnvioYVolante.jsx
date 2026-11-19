@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Truck, FileImage, X } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { formatMoney } from '../utils/format'
-import { dibujarVolante, compartirVolante } from '../utils/volantePago'
+import { dibujarDocumento, documentoDeVolante, compartirImagen } from '../utils/documentoPago'
 
 // Ventana para cobrar el envío: casilla "Cobrar envío", el monto que dice
 // quien lo lleva y (si quiere) quién lo lleva. Se suma al total y a lo que
@@ -94,23 +94,28 @@ export function BotonVolante({ order, alAvisar }) {
     setHaciendo(true)
     try {
       const [{ data: o }, { data: its }, { data: pagos }, { data: cuentas }] = await Promise.all([
-        supabase.from('orders').select('*, clients(full_name, client_number, telefono_login), client_addresses(address, sector)')
+        supabase.from('orders')
+          .select('*, clients(full_name, client_number, cedula, telefono_login, direccion, sector, ciudad, provincia), client_addresses(address, sector)')
           .eq('id', order.id).single(),
         supabase.from('order_items').select('cantidad, subtotal, detalle, products(nombre)').eq('order_id', order.id),
         supabase.from('pagos_reportados').select('monto').eq('order_id', order.id).eq('estado', 'confirmado'),
         supabase.from('bank_accounts').select('banco, tipo_cuenta, numero, titular').eq('activo', true),
       ])
       const ped = o || order
+      const c = ped.clients || order.clients || {}
       const dir = ped.client_addresses
-      const blob = await dibujarVolante({
+      const blob = await dibujarDocumento(documentoDeVolante({
         order: ped,
-        cliente: ped.clients || order.clients,
-        items: (its || []).map((i) => ({ ...i, nombre: i.products?.nombre || 'Producto' })),
+        cliente: {
+          nombre: c.full_name, numero: c.client_number, cedula: c.cedula, telefono: c.telefono_login,
+          direccion: dir ? [dir.address, dir.sector].filter(Boolean).join(', ')
+            : [c.direccion, c.sector, c.ciudad, c.provincia].filter(Boolean).join(', '),
+        },
+        productos: (its || []).map((i) => ({ cantidad: i.cantidad, importe: i.subtotal, detalle: i.detalle, nombre: i.products?.nombre || 'Producto' })),
         pagado: (pagos || []).reduce((n, p) => n + Number(p.monto), 0),
         cuentas: cuentas || [],
-        direccion: ped.delivery_method === 'envio' && dir ? [dir.address, dir.sector].filter(Boolean).join(', ') : '',
-      })
-      const r = await compartirVolante(blob, `Pago ${ped.order_number}`, ped.clients?.telefono_login)
+      }))
+      const r = await compartirImagen(blob, `Pago ${ped.order_number}`, c.telefono_login)
       if (r === 'descargado') alAvisar?.(`Volante de ${ped.order_number} descargado. Se abrió el WhatsApp de la clienta para pegarlo.`)
     } catch (e) {
       alAvisar?.('No se pudo hacer el volante: ' + (e?.message || e))

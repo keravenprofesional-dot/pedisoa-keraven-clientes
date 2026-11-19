@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabaseClient'
 import { formatMoney } from '../../utils/format'
 import PoliticaEnvios from '../../components/PoliticaEnvios'
+import { VentanaRecibo } from '../../components/Recibos'
 
 export default function Checkout() {
   const { items, subtotal, clearCart } = useCart()
@@ -25,6 +26,14 @@ export default function Checkout() {
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState('')
   const [createdOrder, setCreatedOrder] = useState(null)
+  const [recibo, setRecibo] = useState(null)
+
+  // El recibo de venta lo emite la base al crear el pedido.
+  async function verRecibo() {
+    const { data } = await supabase.from('recibos').select('*')
+      .eq('order_id', createdOrder.id).eq('tipo', 'venta').maybeSingle()
+    if (data) setRecibo(data); else navigate(`/mis-pedidos/${createdOrder.id}`)
+  }
 
   // El envío no es fijo: lo pone el personal después, según quién lo lleve.
   const conEnvio = deliveryMethod === 'envio'
@@ -96,11 +105,15 @@ export default function Checkout() {
           <PoliticaEnvios fechaPedido={createdOrder.created_at ? new Date(createdOrder.created_at) : new Date()} />
         </div>
         <button
-          onClick={() => navigate(`/mis-pedidos/${createdOrder.id}`)}
+          onClick={verRecibo}
           className="w-full bg-petroleo text-white rounded-xl py-3 font-bold mb-3"
         >
           Ver mi recibo
         </button>
+        <button onClick={() => navigate(`/mis-pedidos/${createdOrder.id}`)} className="block w-full text-petroleo text-sm font-semibold mb-3">
+          Seguir mi pedido
+        </button>
+        {recibo && <VentanaRecibo recibo={recibo} paraClienta alCerrar={() => setRecibo(null)} />}
         <button onClick={() => navigate('/')} className="text-gray-400 text-sm">
           Volver al inicio
         </button>

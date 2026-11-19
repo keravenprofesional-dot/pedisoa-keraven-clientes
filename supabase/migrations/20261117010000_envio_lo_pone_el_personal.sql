@@ -1,15 +1,15 @@
 -- ============================================================
--- ENVÃO QUE PONE EL PERSONAL
+-- ENVÍO QUE PONE EL PERSONAL
 --
--- Antes el envÃ­o a domicilio era fijo (RD$150). Ahora:
---   * el pedido nace con envÃ­o 0 ("por confirmar" para la clienta);
---   * el personal marca "Cobrar envÃ­o", escribe el monto (y, si quiere,
---     quiÃ©n lo lleva) y se suma al total y a lo que debe la clienta;
+-- Antes el envío a domicilio era fijo (RD$150). Ahora:
+--   * el pedido nace con envío 0 ("por confirmar" para la clienta);
+--   * el personal marca "Cobrar envío", escribe el monto (y, si quiere,
+--     quién lo lleva) y se suma al total y a lo que debe la clienta;
 --   * con 0 se quita.
 -- El ERP se entera solo: erp_al_cambiar_pedido sigue el cambio del total.
 -- ============================================================
 alter table orders add column if not exists envio_nota text;
-comment on column orders.envio_nota is 'QuiÃ©n lleva el envÃ­o o nota del personal (opcional)';
+comment on column orders.envio_nota is 'Quién lleva el envío o nota del personal (opcional)';
 
 create or replace function aplicar_envio_pedido(p_order_id uuid, p_monto numeric, p_nota text)
 returns orders language plpgsql security definer set search_path = public as $$
@@ -21,10 +21,10 @@ begin
   select * into ord from orders where id = p_order_id for update;
   if ord.id is null then raise exception 'Pedido no encontrado'; end if;
   if ord.status in ('cancelado', 'entregado') then
-    raise exception 'No se puede cambiar el envÃ­o de un pedido %', ord.status;
+    raise exception 'No se puede cambiar el envío de un pedido %', ord.status;
   end if;
   if p_monto is null or p_monto < 0 or p_monto > 50000 then
-    raise exception 'El envÃ­o debe estar entre 0 y 50,000';
+    raise exception 'El envío debe estar entre 0 y 50,000';
   end if;
 
   n_total := ord.subtotal + p_monto - ord.descuento;
@@ -51,7 +51,7 @@ create or replace function poner_envio(p_order_id uuid, p_monto numeric, p_nota 
 returns orders language plpgsql security definer set search_path = public as $$
 begin
   if not (tiene_permiso('despacho') or tiene_permiso('editar_pedidos')) then
-    raise exception 'No tienes permiso para poner el envÃ­o';
+    raise exception 'No tienes permiso para poner el envío';
   end if;
   return aplicar_envio_pedido(p_order_id, p_monto, p_nota);
 end $$;
@@ -94,10 +94,10 @@ begin
     raise exception 'El pedido no tiene productos';
   end if;
   if delivery_method not in ('parada','envio','recogida') then
-    raise exception 'Forma de entrega no vÃƒÂ¡lida';
+    raise exception 'Forma de entrega no válida';
   end if;
   if delivery_method = 'parada' and not exists (select 1 from delivery_stops s where s.id = delivery_stop_id and s.activo) then
-    raise exception 'Selecciona una parada vÃƒÂ¡lida';
+    raise exception 'Selecciona una parada válida';
   end if;
   if delivery_method = 'envio' and not exists (select 1 from client_addresses a where a.id = address_id and a.client_id = cli.id) then
     raise exception 'Selecciona una de tus direcciones';
@@ -108,10 +108,10 @@ begin
 
   for it in select * from jsonb_array_elements(items) loop
     cant := (it->>'cantidad')::int;
-    if cant is null or cant < 1 or cant > 999 then raise exception 'Cantidad no vÃƒÂ¡lida'; end if;
+    if cant is null or cant < 1 or cant > 999 then raise exception 'Cantidad no válida'; end if;
     select * into prod from products where id = (it->>'product_id')::uuid;
     if prod.id is null or not prod.disponible or prod.precio <= 0 then
-      raise exception 'Un producto del carrito ya no estÃƒÂ¡ disponible';
+      raise exception 'Un producto del carrito ya no está disponible';
     end if;
     if prod.stock is not null and prod.stock < cant then
       raise exception 'No hay suficiente existencia de %', prod.nombre;
@@ -136,11 +136,11 @@ begin
       for s_nombre in select * from jsonb_array_elements_text(sabores) loop
         select x into sab_def from jsonb_array_elements(prod.armado->'sabores') x
          where x->>'nombre' = s_nombre;
-        if sab_def is null then raise exception 'El sabor "%" no estÃƒÂ¡ en esta caja', s_nombre; end if;
+        if sab_def is null then raise exception 'El sabor "%" no está en esta caja', s_nombre; end if;
         for g in 0 .. jsonb_array_length(prod.armado->'grupos') - 1 loop
           select * into comp from products where id = (sab_def->'productos'->>g)::uuid;
           if comp.id is null or not comp.disponible or comp.precio <= 0 then
-            raise exception 'El sabor "%" no estÃƒÂ¡ disponible ahora mismo', s_nombre;
+            raise exception 'El sabor "%" no está disponible ahora mismo', s_nombre;
           end if;
         end loop;
       end loop;
@@ -148,20 +148,20 @@ begin
       if coalesce(jsonb_array_length(it->'sabores'), 0) > 0 then
         raise exception 'Este producto no se arma por sabores';
       end if;
-      -- Caja con lista fija: revisar que todo lo de adentro estÃƒÂ© disponible.
+      -- Caja con lista fija: revisar que todo lo de adentro esté disponible.
       select c2.nombre into falta
         from product_items i join products c2 on c2.id = i.componente_id
        where i.product_id = prod.id and (not c2.disponible or c2.precio <= 0)
        limit 1;
       if falta is not null then
-        raise exception 'La caja "%" no se puede pedir ahora: % estÃƒÂ¡ agotado', prod.nombre, falta;
+        raise exception 'La caja "%" no se puede pedir ahora: % está agotado', prod.nombre, falta;
       end if;
     end if;
 
     v_sub := v_sub + prod.precio * cant;
   end loop;
 
-  -- El envÃ­o ya no es fijo: nace en 0 y el personal pone el monto despuÃ©s.
+  -- El envío ya no es fijo: nace en 0 y el personal pone el monto después.
   v_envio := 0;
   v_total := v_sub + v_envio;
 
@@ -176,15 +176,15 @@ begin
   elsif payment_method = 'credito' then
     v_balance := v_total;
   else
-    raise exception 'Forma de pago no vÃƒÂ¡lida';
+    raise exception 'Forma de pago no válida';
   end if;
 
   if payment_method in ('avance','credito') then
     if not cli.credit_enabled then
-      raise exception 'Tu cuenta no tiene crÃƒÂ©dito aprobado. Elige pago de contado.';
+      raise exception 'Tu cuenta no tiene crédito aprobado. Elige pago de contado.';
     end if;
     if cli.credit_limit > 0 and cli.balance_pendiente + v_balance > cli.credit_limit then
-      raise exception 'Este pedido pasa tu lÃƒÂ­mite de crÃƒÂ©dito';
+      raise exception 'Este pedido pasa tu límite de crédito';
     end if;
   end if;
 
@@ -219,7 +219,7 @@ begin
         end loop;
       end loop;
     else
-      -- Caja con lista fija: se guarda tambiÃƒÂ©n lo que lleva, para despacho.
+      -- Caja con lista fija: se guarda también lo que lleva, para despacho.
       select jsonb_agg(jsonb_build_object('producto_id', c2.id, 'nombre', c2.nombre, 'cantidad', i.cantidad * cant))
         into detalle
         from product_items i join products c2 on c2.id = i.componente_id

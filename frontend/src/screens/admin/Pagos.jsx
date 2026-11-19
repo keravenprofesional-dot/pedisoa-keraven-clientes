@@ -3,6 +3,7 @@ import { Check, X, Landmark } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { formatMoney, formatDate } from '../../utils/format'
 import { METODOS, ESTADO_PAGO } from '../../components/PagoPedido'
+import { VentanaRecibo, reciboDelPago } from '../../components/Recibos'
 
 // Los avisos de pago de los clientes ("ya pagué"). Se revisa en el banco
 // que el dinero llegó a esa cuenta y se confirma; o se rechaza con motivo.
@@ -11,6 +12,7 @@ export default function Pagos() {
   const [filtro, setFiltro] = useState('reportado')
   const [cargando, setCargando] = useState(true)
   const [aviso, setAviso] = useState('')
+  const [recibo, setRecibo] = useState(null)
 
   useEffect(() => { cargar() }, [])
 
@@ -31,7 +33,12 @@ export default function Pagos() {
     } else if (!confirm(`¿Confirmar ${formatMoney(p.monto)} de ${p.orders?.clients?.full_name}` +
       `${p.cuenta_texto ? `\nen ${p.cuenta_texto}` : ' en efectivo'}?\n\nVerifica primero que el dinero llegó.`)) return
     const { error } = await supabase.rpc('confirmar_pago', { p_id: p.id, p_estado: estado, p_nota: nota })
-    setAviso(error ? error.message : `Pago de ${p.orders?.order_number} ${estado}.`)
+    if (error) { setAviso(error.message); return }
+    // Confirmado: la base emitió el recibo del abono; se abre para mandarlo.
+    const rec = estado === 'confirmado' ? await reciboDelPago(p.id) : null
+    setAviso(`Pago de ${p.orders?.order_number} ${estado}.` +
+      (rec ? (Number(rec.resta) > 0 ? ` Resta ${formatMoney(rec.resta)}.` : ' Pedido PAGADO COMPLETO.') : ''))
+    if (rec) setRecibo(rec)
     cargar()
   }
 
@@ -108,6 +115,7 @@ export default function Pagos() {
           })}
         </div>
       )}
+      {recibo && <VentanaRecibo recibo={recibo} alCerrar={() => setRecibo(null)} />}
     </div>
   )
 }

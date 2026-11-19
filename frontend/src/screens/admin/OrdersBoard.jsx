@@ -6,6 +6,7 @@ import EditarPedido from '../../components/EditarPedido'
 import { formatMoney, formatDate, STATUS_LABELS, STATUS_ORDER, colorDe } from '../../utils/format'
 import Debe from '../../components/Debe'
 import { VentanaEnvio, BotonEnvio, BotonVolante } from '../../components/EnvioYVolante'
+import { VentanaRecibo, RecibosDelPedido, BotonRecibos, reciboDelPago } from '../../components/Recibos'
 
 const ESTADOS = STATUS_ORDER.concat('cancelado')
 
@@ -17,6 +18,8 @@ export default function OrdersBoard() {
   const puedeEditar = puede('editar_pedidos')
   const puedeEnvio = puede('despacho') || puedeEditar
   const [conEnvio, setConEnvio] = useState(null)
+  const [recibo, setRecibo] = useState(null)          // recibo recién emitido, para mandarlo
+  const [verRecibos, setVerRecibos] = useState(null)  // pedido cuyos recibos se están viendo
   const [orders, setOrders] = useState([])
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -74,11 +77,16 @@ export default function OrdersBoard() {
       referencia = prompt('Número de referencia de la transferencia o depósito:')
       if (referencia === null) return
     }
-    const { error } = await supabase.rpc('reportar_pago', {
+    const { data: pago, error } = await supabase.rpc('reportar_pago', {
       p_order_id: o.id, p_monto: monto, p_metodo: cuenta ? 'transferencia' : 'efectivo',
       p_cuenta_id: cuenta?.id || null, p_referencia: referencia,
     })
-    setAviso(error ? error.message : `Pago de ${formatMoney(monto)} registrado${cuenta ? ` en ${cuenta.banco}` : ' en efectivo'}.`)
+    if (error) { setAviso(error.message); return }
+    // La base ya emitió el recibo del abono: se abre para mandarlo.
+    const rec = pago?.id ? await reciboDelPago(pago.id) : null
+    setAviso(`Pago de ${formatMoney(monto)} registrado${cuenta ? ` en ${cuenta.banco}` : ' en efectivo'}.` +
+      (rec ? (Number(rec.resta) > 0 ? ` Resta ${formatMoney(rec.resta)}.` : ' Pedido PAGADO COMPLETO.') : ''))
+    if (rec) setRecibo(rec)
     load()
   }
 
@@ -152,6 +160,7 @@ export default function OrdersBoard() {
         <BotonEnvio onClick={() => setConEnvio(o)} />
       )}
       {o.status !== 'cancelado' && <BotonVolante order={o} alAvisar={setAviso} />}
+      <BotonRecibos onClick={() => setVerRecibos(o)} />
     </div>
   )
   const totalCon = (o) => (
@@ -236,6 +245,8 @@ export default function OrdersBoard() {
         <VentanaEnvio order={conEnvio} alCerrar={() => setConEnvio(null)}
           alGuardar={(msg) => { setConEnvio(null); setAviso(msg); load() }} />
       )}
+      {recibo && <VentanaRecibo recibo={recibo} alCerrar={() => setRecibo(null)} />}
+      {verRecibos && <RecibosDelPedido order={verRecibos} alCerrar={() => setVerRecibos(null)} />}
     </div>
   )
 }

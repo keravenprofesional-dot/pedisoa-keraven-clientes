@@ -53,7 +53,7 @@ o = (await como(db, SUP, `select * from poner_envio($1,300,'')`, [oc.id])).rows[
 bien(N(o.total) === 2200 && N(o.descuento) === 100, 'subtotal 2,000 − 100 desc. + 300 envío = 2,200')
 const ok2 = await pedir('contado')
 o = (await como(db, SUP, `select * from poner_envio($1,250,'')`, [ok2.id])).rows[0]
-bien(N(o.total) === 2250 && N(o.balance) === 0, 'contado: total 2,250 y balance sigue en 0')
+bien(N(o.total) === 2250 && N(o.balance) === 2250, 'contado: total 2,250 y debe 2,250 hasta que pague')
 const oa = await pedir('avance')
 o = (await como(db, SUP, `select * from poner_envio($1,150,'')`, [oa.id])).rows[0]
 bien(N(o.total) === 2150 && N(o.balance) === 1650, 'avance de 500: total 2,150, debe 1,650')

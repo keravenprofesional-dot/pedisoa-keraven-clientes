@@ -38,7 +38,9 @@ bien(N(ob.descuento) === 0 && N(ob.total) === 3000, 'Bea (sin descuento) paga 3,
 
 const oc = await pedir(ANA, 2, 'credito')
 bien(N(oc.total) === 1800 && N(oc.balance) === 1800, 'crédito: 2,000 − 10% = 1,800 de balance')
-bien(await saldo(cA) === 1800, 'lo que debe Ana es 1,800, no 2,000')
+// Desde el 19-nov al contado también se debe hasta pagar: Ana debe su pedido
+// al contado (2,700) + el de crédito (1,800).
+bien(await saldo(cA) === 4500, 'lo que debe Ana es 2,700 + 1,800 = 4,500 (con el descuento, no sin él)')
 
 console.log('\n2) Descuento en un pedido puntual')
 await falla(() => como(db, ALM, `select descontar_pedido($1,100,'x')`, [oc.id]), 'Almacén no descuenta pedidos')
@@ -47,11 +49,11 @@ await falla(() => como(db, SUP, `select descontar_pedido($1,100,'')`, [oc.id]), 
 await falla(() => como(db, SUP, `select descontar_pedido($1,5000,'x')`, [oc.id]), 'no más que el subtotal')
 let d = (await como(db, SUP, `select * from descontar_pedido($1,500,'Promoción de apertura')`, [oc.id])).rows[0]
 bien(N(d.total) === 1500 && N(d.balance) === 1500, 'crédito de 2,000 con 500 de descuento: debe 1,500')
-bien(await saldo(cA) === 1500, 'lo que debe Ana baja a 1,500')
+bien(await saldo(cA) === 4200, 'lo que debe Ana baja 300: 2,700 + 1,500 = 4,200')
 d = (await como(db, SUP, `select * from descontar_pedido($1,0,'')`, [oc.id])).rows[0]
-bien(N(d.total) === 2000 && await saldo(cA) === 2000, 'quitar el descuento devuelve el total a 2,000')
+bien(N(d.total) === 2000 && await saldo(cA) === 4700, 'quitar el descuento devuelve el total a 2,000 (debe 2,700 + 2,000)')
 d = (await como(db, SUP, `select * from descontar_pedido($1,250,'Cortesía')`, [ob.id])).rows[0]
-bien(N(d.total) === 2750 && N(d.balance) === 0, 'contado: el total baja y el balance sigue en 0')
+bien(N(d.total) === 2750 && N(d.balance) === 2750, 'contado: el total baja y lo que debe baja igual (2,750)')
 await falla(() => como(db, SUP, `update orders set descuento=999 where id=$1`, [ob.id]), 'nadie cambia el descuento a mano, solo por la función')
 
 console.log('\n3) Pedido cerrado')
