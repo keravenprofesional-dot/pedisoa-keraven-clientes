@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Eye, Users, CalendarDays, ShoppingBag, Package } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { formatMoney, formatDate } from '../../utils/format'
+import VentasDelMes from './VentasDelMes'
 
 const PERIODOS = [[7, '7 días'], [30, '30 días'], [90, '90 días']]
 
@@ -24,7 +25,11 @@ export default function Estadisticas() {
   return (
     <div className="p-4 md:p-8">
       <h1 className="text-2xl font-bold text-grafondo">Estadísticas</h1>
-      <p className="mb-5 text-sm text-gray-500">Visitas de los clientes y los productos que más miran y compran.</p>
+      <p className="mb-5 text-sm text-gray-500">Ventas del mes, proyección, visitas de los clientes y los productos que más miran y compran.</p>
+
+      <VentasDelMes />
+
+      <h2 className="mb-3 text-lg font-bold text-grafondo">Visitas y productos</h2>
 
       <div className="mb-5 flex gap-2">
         {PERIODOS.map(([v, t]) => (
