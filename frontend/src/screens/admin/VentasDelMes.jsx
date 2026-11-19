@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ChevronLeft, ChevronRight, Download, Target, Table2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Download, Target, Table2, CalendarRange } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { formatMoney } from '../../utils/format'
 
@@ -30,6 +30,7 @@ export default function VentasDelMes() {
   const [v, setV] = useState(null)
   const [error, setError] = useState('')
   const [proyecciones, setProyecciones] = useState([])
+  const [version, setVersion] = useState(0) // sube al guardar una proyección, para refrescar el historial
 
   useEffect(() => {
     setV(null); setError('')
@@ -55,20 +56,11 @@ export default function VentasDelMes() {
       f.fecha_pago ? dia(f.fecha_pago) : (Number(f.debe) > 0 ? 'Pendiente' : ''), f.estado,
     ]), [], ['', '', 'TOTAL VENDIDO', '', '', '', '', '', '', num(v.vendido), num(v.cobrado), num(debeTotal)]]
     if (meta) lineas.push(['', '', 'PROYECCIÓN', '', '', '', '', '', '', num(meta.monto)])
-    // Texto separado por tabulaciones en UTF-16: Excel lo abre directo, con tildes.
-    const txt = lineas.map((l) => l.map((c) => String(c ?? '').replace(/[\t\n]/g, ' ')).join('\t')).join('\r\n')
-    const bytes = new Uint8Array(2 + txt.length * 2)
-    bytes[0] = 0xFF; bytes[1] = 0xFE
-    for (let i = 0; i < txt.length; i++) { const c = txt.charCodeAt(i); bytes[2 + i * 2] = c & 255; bytes[3 + i * 2] = c >> 8 }
-    const url = URL.createObjectURL(new Blob([bytes], { type: 'text/csv;charset=utf-16le' }))
-    const a = document.createElement('a')
-    a.href = url; a.download = `Ventas Keraven ${nombreMes(mes)}.csv`
-    document.body.appendChild(a); a.click(); a.remove()
-    setTimeout(() => URL.revokeObjectURL(url), 5000)
+    bajarHoja(lineas, `Ventas Keraven ${nombreMes(mes)}`)
   }
 
   return (
-    <section className="mb-8">
+    <section id="ventas-del-mes" className="mb-8 scroll-mt-4">
       {/* Franja del mes: el número grande */}
       <div className="overflow-hidden rounded-2xl bg-negro text-white">
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-4">
@@ -158,8 +150,129 @@ export default function VentasDelMes() {
         </div>
       )}
 
-      <Proyeccion proyecciones={proyecciones} alGuardar={cargarProyecciones} />
+      <Proyeccion proyecciones={proyecciones} alGuardar={() => { cargarProyecciones(); setVersion((n) => n + 1) }} />
+
+      <Historial version={version} mesAbierto={mes}
+        alElegir={(m) => { setMes(m); document.getElementById('ventas-del-mes')?.scrollIntoView({ behavior: 'smooth' }) }} />
     </section>
+  )
+}
+
+// Bajar una hoja a Excel: texto con tabulaciones en UTF-16 (Excel lo abre directo, con tildes).
+function bajarHoja(lineas, nombre) {
+  const txt = lineas.map((l) => l.map((c) => String(c ?? '').replace(/[\t\n]/g, ' ')).join('\t')).join('\r\n')
+  const bytes = new Uint8Array(2 + txt.length * 2)
+  bytes[0] = 0xFF; bytes[1] = 0xFE
+  for (let i = 0; i < txt.length; i++) { const c = txt.charCodeAt(i); bytes[2 + i * 2] = c & 255; bytes[3 + i * 2] = c >> 8 }
+  const url = URL.createObjectURL(new Blob([bytes], { type: 'text/csv;charset=utf-16le' }))
+  const a = document.createElement('a')
+  a.href = url; a.download = `${nombre}.csv`
+  document.body.appendChild(a); a.click(); a.remove()
+  setTimeout(() => URL.revokeObjectURL(url), 5000)
+}
+
+// HISTORIAL: todos los meses desde que empezó el programa, con el mismo
+// formato de Ventas del mes. Tocar un mes lo abre arriba con su hoja.
+function Historial({ version, mesAbierto, alElegir }) {
+  const [h, setH] = useState(null)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    supabase.rpc('ventas_por_mes').then(({ data, error: err }) => {
+      if (err) setError(err.message); else { setH(data); setError('') }
+    })
+  }, [version])
+
+  const meses = h?.meses || []
+  const suma = (k) => meses.reduce((n, m) => n + Number(m[k] || 0), 0)
+  const max = Math.max(1, ...meses.map((m) => Number(m.vendido)))
+  const pct = (m) => (Number(m.proyeccion) > 0 ? Math.round((Number(m.vendido) / Number(m.proyeccion)) * 100) : null)
+
+  function bajar() {
+    const n = (x) => Number(x || 0).toFixed(2)
+    bajarHoja([
+      ['Mes', 'Vendido', 'Cobrado', 'Por cobrar', 'Pedidos', 'Clientes', 'Cancelados', 'Proyección', '% logrado'],
+      ...meses.map((m) => [nombreMes(m.mes), n(m.vendido), n(m.cobrado), n(m.por_cobrar), m.pedidos, m.clientes, m.cancelados,
+        m.proyeccion != null ? n(m.proyeccion) : '', pct(m) != null ? `${pct(m)}%` : '']),
+      [],
+      ['TOTAL', n(suma('vendido')), n(suma('cobrado')), n(suma('por_cobrar')), suma('pedidos'), '', suma('cancelados')],
+    ], `Historial de ventas Keraven ${dia(new Date())}`.replace(/\//g, '-'))
+  }
+
+  return (
+    <div className="mt-3 rounded-2xl border border-gray-100 bg-white">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
+        <div>
+          <p className="flex items-center gap-2 text-sm font-semibold text-grafondo"><CalendarRange size={16} className="text-petroleo" /> Historial mes por mes</p>
+          {h && <p className="text-[11px] text-gray-500">Desde {nombreMes(h.desde)} hasta hoy. Toca un mes para ver quién compró.</p>}
+        </div>
+        <button onClick={bajar} disabled={!meses.length}
+          className="flex items-center gap-1.5 rounded-full bg-negro px-3 py-1.5 text-xs font-semibold text-oro disabled:opacity-40">
+          <Download size={14} /> Descargar Excel
+        </button>
+      </div>
+      {error && <p className="px-4 pb-4 text-sm text-red-600">{error}</p>}
+      {!h && !error && <p className="px-4 pb-6 text-center text-sm text-gray-400">Cargando…</p>}
+      {h && (
+        <div className="overflow-x-auto border-t border-gray-100">
+          <table className="w-full min-w-[52rem] border-collapse whitespace-nowrap text-sm">
+            <thead className="bg-cremaoscura text-left text-[11px] uppercase tracking-wide text-tinta">
+              <tr>
+                {['Mes', 'Vendido', 'Cobrado', 'Por cobrar', 'Pedidos', 'Clientes', 'Cancel.', 'Proyección'].map((t, i) => (
+                  <th key={t} className={`border-b border-r border-gray-200 px-2.5 py-2 font-semibold last:border-r-0 ${i ? 'text-right' : ''}`}>{t}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {meses.map((m, i) => {
+                const abierto = m.mes === mesAbierto
+                const p = pct(m)
+                return (
+                  <tr key={m.mes} onClick={() => alElegir(m.mes)} title="Ver este mes arriba"
+                    className={`cursor-pointer ${abierto ? 'bg-orosuave/30' : i % 2 ? 'bg-crema/60' : ''} hover:bg-orosuave/20`}>
+                    <td className="border-b border-r border-gray-100 px-2.5 py-1.5 font-semibold capitalize">
+                      {nombreMes(m.mes)}{m.mes === MES_ACTUAL && <span className="ml-1.5 text-[10px] font-normal normal-case text-gray-400">(en curso)</span>}
+                    </td>
+                    <td className="border-b border-r border-gray-100 px-2.5 py-1.5 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <span className="hidden h-1.5 w-20 overflow-hidden rounded-full bg-graclaro md:inline-block">
+                          <span className="block h-full rounded-full bg-oro" style={{ width: `${(Number(m.vendido) / max) * 100}%` }} />
+                        </span>
+                        <span className="font-semibold tabular-nums">{formatMoney(m.vendido)}</span>
+                      </div>
+                    </td>
+                    <td className="border-b border-r border-gray-100 px-2.5 py-1.5 text-right tabular-nums text-green-700">{formatMoney(m.cobrado)}</td>
+                    <td className={`border-b border-r border-gray-100 px-2.5 py-1.5 text-right tabular-nums ${Number(m.por_cobrar) > 0 ? 'font-bold text-red-600' : 'text-gray-400'}`}>
+                      {Number(m.por_cobrar) > 0 ? formatMoney(m.por_cobrar) : '—'}
+                    </td>
+                    <td className="border-b border-r border-gray-100 px-2.5 py-1.5 text-right tabular-nums">{m.pedidos}</td>
+                    <td className="border-b border-r border-gray-100 px-2.5 py-1.5 text-right tabular-nums">{m.clientes}</td>
+                    <td className="border-b border-r border-gray-100 px-2.5 py-1.5 text-right tabular-nums text-gray-500">{m.cancelados || '—'}</td>
+                    <td className="border-b border-gray-100 px-2.5 py-1.5 text-right tabular-nums">
+                      {m.proyeccion != null
+                        ? <>{formatMoney(m.proyeccion)} <span className={`ml-1 text-xs font-bold ${p >= 100 ? 'text-green-700' : 'text-oroprof'}`}>{p}%</span></>
+                        : <span className="text-gray-400">—</span>}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+            <tfoot className="bg-cremaoscura font-bold">
+              <tr>
+                <td className="border-t border-gray-200 px-2.5 py-2 text-xs uppercase tracking-wide">Total</td>
+                <td className="border-t border-gray-200 px-2.5 py-2 text-right tabular-nums">{formatMoney(suma('vendido'))}</td>
+                <td className="border-t border-gray-200 px-2.5 py-2 text-right tabular-nums text-green-700">{formatMoney(suma('cobrado'))}</td>
+                <td className="border-t border-gray-200 px-2.5 py-2 text-right tabular-nums text-red-600">{formatMoney(suma('por_cobrar'))}</td>
+                <td className="border-t border-gray-200 px-2.5 py-2 text-right tabular-nums">{suma('pedidos')}</td>
+                <td className="border-t border-gray-200" />
+                <td className="border-t border-gray-200 px-2.5 py-2 text-right tabular-nums text-gray-500">{suma('cancelados') || '—'}</td>
+                <td className="border-t border-gray-200" />
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      )}
+    </div>
   )
 }
 

@@ -63,5 +63,19 @@ bien(N(p.monto) === 90000 && p.nota === null, 'se puede cambiar después')
 bien((await como(db, NADA, `select * from proyecciones_ventas`)).rows.length === 0, 'sin permiso no la ve')
 bien((await como(db, ANA, `select * from proyecciones_ventas`)).rows.length === 0, 'la clienta no la ve')
 
+console.log('\n4) Historial mes por mes')
+await falla(() => como(db, NADA, `select ventas_por_mes()`), 'sin permiso no ve el historial')
+await como(db, SUP, `insert into proyecciones_ventas(mes,monto) values('2026-10-01',5000)`)
+const h = (await como(db, SUP, `select ventas_por_mes() h`)).rows[0].h
+const hoyMes = (await q(`select to_char(date_trunc('month', now() at time zone 'America/Santo_Domingo'),'YYYY-MM-DD') m`)).rows[0].m
+bien(h.desde === '2026-10-01', `empieza en octubre, el mes del primer pedido (dio ${h.desde})`)
+bien(h.meses[0].mes === hoyMes, 'el primero de la lista es el mes actual')
+const oct = h.meses.find((m) => m.mes === '2026-10-01'), nov = h.meses.find((m) => m.mes === '2026-11-01')
+bien(oct && N(oct.vendido) === N(v.vendido) && N(oct.pedidos) === v.pedidos, 'octubre del historial = octubre de Ventas del mes (6,000 y 3 pedidos)')
+bien(N(oct.cobrado) === 1000 && N(oct.por_cobrar) === 2000 && N(oct.cancelados) === 1 && N(oct.clientes) === 2, 'octubre: cobrado 1,000, por cobrar 2,000, 1 cancelado, 2 clientas')
+bien(N(oct.proyeccion) === 5000, 'octubre trae su proyección')
+bien(nov && N(nov.vendido) === 5000 && nov.proyeccion === null, 'noviembre: 5,000 y sin proyección')
+bien(h.meses.every((m, i) => i === 0 || m.mes < h.meses[i - 1].mes), 'los meses van del más nuevo al más viejo, sin huecos ni repetidos')
+
 console.log(`\n${ok} bien, ${mal} mal`)
 process.exit(mal ? 1 : 0)
