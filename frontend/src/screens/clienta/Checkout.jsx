@@ -100,7 +100,19 @@ export default function Checkout() {
       <div className="p-6 max-w-md mx-auto text-center py-16">
         <p className="text-dorado font-semibold mb-2">PEDIDO CREADO</p>
         <h1 className="text-3xl font-extrabold text-petroleo mb-4">{createdOrder.order_number}</h1>
-        <p className="text-gray-500 mb-6">Te avisaremos cuando tu pedido cambie de estado.</p>
+        <p className="text-gray-500 mb-4">Te avisaremos cuando tu pedido cambie de estado.</p>
+        <div className="text-left bg-amber-50 ring-1 ring-amber-200 rounded-2xl px-4 py-3 mb-6">
+          <p className="font-bold text-petroleo mb-1">¡Gracias por tu compra!</p>
+          <p className="text-sm text-gray-700">
+            Para preparar y enviar tu pedido, haz tu pago y mándanos tu comprobante: tócale
+            a <strong>«Ya pagué»</strong> en tu pedido y pon el número de referencia, o envíanos
+            la foto por WhatsApp. Apenas lo confirmemos, tu pedido sale directo para ti.
+          </p>
+          <button onClick={() => navigate(`/mis-pedidos/${createdOrder.id}`)}
+            className="mt-2 text-sm font-semibold text-oroprof border border-amber-300 rounded-lg px-3 py-1.5">
+            Enviar mi comprobante
+          </button>
+        </div>
         <div className="mb-8">
           <PoliticaEnvios fechaPedido={createdOrder.created_at ? new Date(createdOrder.created_at) : new Date()} />
         </div>

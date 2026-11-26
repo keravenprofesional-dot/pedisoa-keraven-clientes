@@ -46,16 +46,21 @@ export default function OrderDetail() {
 
         <div className="border-t border-b py-3 my-3">
           {items.map((it) => (
-            <div key={it.id} className="flex justify-between text-sm py-1">
-              <span>
-                {it.cantidad}× {it.products?.nombre}
+            <div key={it.id} className="flex justify-between gap-3 text-sm py-1.5">
+              <div>
+                <p className="font-semibold">{it.cantidad}× {it.products?.nombre}</p>
                 {it.detalle?.length > 0 && (
-                  <span className="block text-xs text-gray-500">
-                    {it.detalle.map((d) => `${d.cantidad} ${d.nombre}`).join(' · ')}
-                  </span>
+                  <ul className="mt-1 ml-1 space-y-0.5 text-[13px] text-gray-700">
+                    {it.detalle.map((d, i) => (
+                      <li key={i} className="flex gap-1.5">
+                        <span className="text-dorado">•</span>
+                        <span>{d.cantidad} × {String(d.nombre || '').replace(/\s+/g, ' ').trim()}</span>
+                      </li>
+                    ))}
+                  </ul>
                 )}
-              </span>
-              <span>{formatMoney(it.subtotal)}</span>
+              </div>
+              <span className="whitespace-nowrap font-semibold">{formatMoney(it.subtotal)}</span>
             </div>
           ))}
         </div>

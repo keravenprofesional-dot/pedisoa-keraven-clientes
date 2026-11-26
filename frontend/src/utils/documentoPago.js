@@ -17,6 +17,13 @@ const C = {
 const LETRA = 'Inter, "Segoe UI", Roboto, Arial, sans-serif'
 const METODO = { efectivo: 'Efectivo', transferencia: 'Transferencia', deposito: 'Depósito' }
 
+// El aviso amable para que la clienta mande su comprobante (volante y recibos).
+const MENSAJE_COMPROBANTE = [
+  'Cuando hagas tu pago, mándanos tu comprobante: en la app con',
+  '«Ya pagué» o la foto por WhatsApp. Apenas lo confirmemos,',
+  'preparamos tu pedido y sale directo para ti. ¡Gracias por elegirnos!',
+]
+
 export const TITULO_RECIBO = {
   venta: 'RECIBO DE VENTA',
   ajuste: 'RECIBO DE VENTA',
@@ -121,10 +128,17 @@ export async function dibujarDocumento(doc) {
         texto(l, M, y, { tam: 30, peso: 600 })
         if (i === 0) texto(formatMoney(it.importe), ANCHO - M, y, { tam: 30, peso: 600, alin: 'right' })
       })
+      // Lo que trae el kit o la caja: un producto por renglón, bien legible.
       if (it.detalle?.length) {
-        ctx.font = `400 24px ${LETRA}`
-        const txt = it.detalle.map((d) => `${d.cantidad} ${d.nombre}`).join(' · ')
-        for (const l of partir(ctx, txt, ANCHO - 2 * M - 260)) { y += 34; texto(l, M + 24, y, { tam: 24, color: C.gris }) }
+        y += 8
+        ctx.font = `500 26px ${LETRA}`
+        for (const d of it.detalle) {
+          partir(ctx, `${d.cantidad} × ${String(d.nombre || '').replace(/\s+/g, ' ').trim()}`, ANCHO - 2 * M - 300).forEach((l, i) => {
+            y += 38
+            if (i === 0 && pintar) { ctx.fillStyle = C.oro; ctx.fillRect(M + 28, y - 11, 9, 9) }
+            texto(l, M + 52, y, { tam: 26, peso: 500, color: C.tinta })
+          })
+        }
       }
       y += 22; raya(y)
     }
@@ -169,8 +183,8 @@ export async function dibujarDocumento(doc) {
         texto(`Nº ${b.numero}`, ANCHO - M, y, { tam: 28, peso: 700, alin: 'right' })
         if (b.titular) { y += 36; texto(`A nombre de ${b.titular}`, M, y, { tam: 24, color: C.gris }) }
       }
-      y += 40
-      texto('Envía el comprobante por la app o por WhatsApp.', M, y, { tam: 24, color: C.gris })
+      y += 30
+      for (const l of MENSAJE_COMPROBANTE) { y += 36; texto(l, M, y, { tam: 25, color: C.tinta }) }
     }
 
     // ── Pie
