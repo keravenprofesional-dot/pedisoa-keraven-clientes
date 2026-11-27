@@ -7,6 +7,7 @@ import { formatMoney, formatDate, STATUS_LABELS, STATUS_ORDER, colorDe } from '.
 import Debe from '../../components/Debe'
 import { VentanaEnvio, BotonEnvio, BotonVolante } from '../../components/EnvioYVolante'
 import { VentanaRecibo, RecibosDelPedido, BotonRecibos, reciboDelPago } from '../../components/Recibos'
+import { VentanaDetallePedido } from '../../components/DetallePedido'
 
 const ESTADOS = STATUS_ORDER.concat('cancelado')
 
@@ -27,6 +28,7 @@ export default function OrdersBoard() {
   const [pagos, setPagos] = useState({})   // order_id → { confirmado, revision }
   const [cuentas, setCuentas] = useState([])
   const [editando, setEditando] = useState(null)
+  const [viendo, setViendo] = useState(null)        // pedido abierto con todo su detalle
 
   useEffect(() => { load() }, [])
 
@@ -203,7 +205,7 @@ export default function OrdersBoard() {
           <tbody>
             {filtered.map((o) => (
               <tr key={o.id} className="border-t border-gray-100">
-                <td className="p-3 font-bold text-petroleo">{o.order_number}</td>
+                <td className="p-3"><button onClick={() => setViendo(o)} title="Ver todo el pedido" className="whitespace-nowrap font-bold text-petroleo underline decoration-dotted underline-offset-4">{o.order_number}</button></td>
                 <td className="p-3">{o.clients?.full_name} <span className="text-xs text-gray-400">{o.clients?.client_number}</span></td>
                 <td className="p-3">{formatDate(o.created_at)}</td>
                 <td className="p-3">{totalCon(o)}</td>
@@ -223,7 +225,7 @@ export default function OrdersBoard() {
         {filtered.map((o) => (
           <div key={o.id} className="bg-white border border-gray-100 rounded-xl p-4">
             <div className="flex justify-between mb-1">
-              <span className="font-bold text-petroleo">{o.order_number}</span>
+              <button onClick={() => setViendo(o)} className="font-bold text-petroleo underline decoration-dotted underline-offset-4">{o.order_number}</button>
               <span className="text-right font-semibold">{totalCon(o)}</span>
             </div>
             <p className="text-sm text-gray-500 mb-1">{o.clients?.full_name} · {formatDate(o.created_at)}</p>
@@ -246,6 +248,7 @@ export default function OrdersBoard() {
           alGuardar={(msg) => { setConEnvio(null); setAviso(msg); load() }} />
       )}
       {recibo && <VentanaRecibo recibo={recibo} alCerrar={() => setRecibo(null)} />}
+      {viendo && <VentanaDetallePedido order={viendo} alCerrar={() => setViendo(null)} />}
       {verRecibos && <RecibosDelPedido order={verRecibos} alCerrar={() => setVerRecibos(null)} />}
     </div>
   )

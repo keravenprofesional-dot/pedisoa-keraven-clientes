@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabaseClient'
 import { formatMoney, formatDate } from '../../utils/format'
 import StatusTracker from '../../components/StatusTracker'
 import PagoPedido from '../../components/PagoPedido'
+import { ListaProductos } from '../../components/DetallePedido'
 
 export default function OrderDetail() {
   const { id } = useParams()
@@ -44,25 +45,8 @@ export default function OrderDetail() {
           </p>
         )}
 
-        <div className="border-t border-b py-3 my-3">
-          {items.map((it) => (
-            <div key={it.id} className="flex justify-between gap-3 text-sm py-1.5">
-              <div>
-                <p className="font-semibold">{it.cantidad}× {it.products?.nombre}</p>
-                {it.detalle?.length > 0 && (
-                  <ul className="mt-1 ml-1 space-y-0.5 text-[13px] text-gray-700">
-                    {it.detalle.map((d, i) => (
-                      <li key={i} className="flex gap-1.5">
-                        <span className="text-dorado">•</span>
-                        <span>{d.cantidad} × {String(d.nombre || '').replace(/\s+/g, ' ').trim()}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-              <span className="whitespace-nowrap font-semibold">{formatMoney(it.subtotal)}</span>
-            </div>
-          ))}
+        <div className="border-t border-b py-2 my-3">
+          <ListaProductos items={items} />
         </div>
 
         <div className="text-sm space-y-1">

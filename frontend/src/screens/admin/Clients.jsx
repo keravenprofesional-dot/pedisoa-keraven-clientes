@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
-import { Copy, Check, UserPlus, KeyRound, Pencil, UserX, UserCheck, MapPin, Plus, Trash2, ChevronDown, ChevronUp, Percent } from 'lucide-react'
+import { Copy, Check, UserPlus, KeyRound, Pencil, UserX, UserCheck, MapPin, Plus, Trash2, ChevronDown, ChevronUp, Percent, History } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { adminUsuarios } from '../../lib/adminUsuarios'
 import { useAuth } from '../../context/AuthContext'
 import { formatMoney } from '../../utils/format'
 import { formatCode, soloDigitos } from '../../utils/accessCode'
 import Debe from '../../components/Debe'
+import { VentanaHistorialCliente } from '../../components/DetallePedido'
 
 // La clienta con cédula registrada entra con su teléfono + su cédula (la base de datos
 // pone la cédula como su clave). Solo las que no tienen cédula usan código de acceso.
@@ -27,6 +28,8 @@ export default function Clients() {
   const puedeEditar = puede('editar_clientas')
   const puedeParadas = puede('configuracion')
   const puedeDescuentos = puede('dar_descuentos')
+  const puedeHistorial = puede('ver_pedidos')
+  const [historial, setHistorial] = useState(null) // clienta cuyo historial se está viendo
 
   const [clients, setClients] = useState([])
   const [descuentos, setDescuentos] = useState({}) // client_id → { porcentaje, motivo }
@@ -381,6 +384,12 @@ export default function Clients() {
                       </span>
                     )}
                     {c.correo && <div className="text-xs text-gray-400">{c.correo}</div>}
+                    {puedeHistorial && (
+                      <button onClick={() => setHistorial(c)} title="Sus compras desde el primer pedido"
+                        className="mt-1 flex items-center gap-1 text-xs font-semibold text-petroleo hover:underline">
+                        <History size={12} /> Historial de compras
+                      </button>
+                    )}
                   </td>
                   <td className="p-3 whitespace-nowrap">{c.telefono_login}</td>
                   <td className="p-3">{[c.sector, c.ciudad].filter(Boolean).join(' — ') || '—'}</td>
@@ -429,13 +438,16 @@ export default function Clients() {
                 {c.telefono_login} · {c.delivery_stops?.nombre || 'sin parada'}
               </p>
               <Debe monto={c.balance_pendiente} className="mt-1" />
-              {puedeEditar && (
+              {(puedeEditar || puedeHistorial) && (
                 <div className="flex gap-3 mt-2 text-xs">
+                  {puedeHistorial && <button onClick={() => setHistorial(c)} className="flex items-center gap-1 font-semibold text-petroleo"><History size={13} /> Historial</button>}
+                  {puedeEditar && <>
                   <button onClick={() => abrir(c)} className="flex items-center gap-1 text-petroleo"><Pencil size={13} /> Editar</button>
                   {entraConCedula(c)
                     ? <span className="text-gray-500">Entra con su cédula</span>
                     : <button onClick={() => nuevoCodigo(c)} className="flex items-center gap-1 text-petroleo"><KeyRound size={13} /> Nuevo código</button>}
                   <button onClick={() => activar(c, !activa)} className={activa ? 'text-red-500' : 'text-green-700'}>{activa ? 'Desactivar' : 'Activar'}</button>
+                  </>}
                 </div>
               )}
             </div>
@@ -444,6 +456,7 @@ export default function Clients() {
       </div>
 
       {filtered.length === 0 && <p className="text-gray-400 text-center py-10">No hay clientes todavía.</p>}
+      {historial && <VentanaHistorialCliente cliente={historial} alCerrar={() => setHistorial(null)} />}
     </div>
   )
 }
